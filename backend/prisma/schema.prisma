@@ -1,13 +1,62 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Campsite {
+  id Int @id @default(autoincrement())
+
+  // Where this data comes from (e.g. filename or dataset label)
+  dataset String
+  // Stable identifier from GeoJSON feature (e.g. properties.OBJECTID)
+  sourceId String
+
+  // Basic info
+  name String?
+  place String?
+  region String?
+  campsiteCategory String?
+
+  // Optional short introduction/description
+  introduction String?
+
+  // Stored in WGS84 (EPSG:4326)
+  lat Float
+  lon Float
+
+  // Capacity
+  numberOfPoweredSites Int @default(0)
+  numberOfUnpoweredSites Int @default(0)
+
+  // Booking
+  bookable Boolean @default(false)
+
+  // Facilities (later we can parse from `facilities` string)
+  hasToilets Boolean @default(false)
+  hasWater Boolean @default(false)
+  hasPower Boolean @default(false)
+
+  // Access
+  access String?
+
+  // Raw facilities string (keep original for reference)
+  facilities String?
+
+  // Links / images
+  staticLink String?
+  imageUrl String?
+
+  properties String?
+  geometry String?
+
+  createdAt DateTime @default(now())
+
+  @@unique([dataset, sourceId])
+  @@index([dataset])
+  @@index([campsiteCategory])
+  @@index([region])
 }
