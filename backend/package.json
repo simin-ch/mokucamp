@@ -8,19 +8,21 @@
     "start": "node server.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev"
+    "prisma:migrate": "prisma migrate dev",
+    "seed:doc-geojson": "node src/scripts/seed-doc-geojson.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "@prisma/client": "^7.5.0",
+    "@prisma/client": "^5.22.0",
     "axios": "^1.13.6",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
-    "prisma": "^7.5.0"
+    "prisma": "^5.22.0",
+    "proj4": "^2.20.4"
   },
   "devDependencies": {
     "jest": "^30.3.0",
