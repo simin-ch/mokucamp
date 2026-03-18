@@ -10,7 +10,7 @@ function App() {
     <>
       <div className="mx-auto max-w-3xl px-6 pt-10">
         <div className="inline-flex items-center gap-2 rounded-full bg-indigo-600/10 px-3 py-1 text-sm font-medium text-indigo-700">
-          Tailwind 已启用
+          Tailwind is enabled
           <span className="inline-block h-2 w-2 rounded-full bg-indigo-500" />
         </div>
       </div>
