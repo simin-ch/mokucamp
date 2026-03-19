@@ -3,60 +3,59 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "sqlite" // change to "postgresql" in production
   url      = env("DATABASE_URL")
 }
 
 model Campsite {
-  id Int @id @default(autoincrement())
+  id                     Int      @id @default(autoincrement())
 
-  // Where this data comes from (e.g. filename or dataset label)
-  dataset String
-  // Stable identifier from GeoJSON feature (e.g. properties.OBJECTID)
-  sourceId String
+  dataset                String
+  sourceId               String
 
-  // Basic info
-  name String?
-  place String?
-  region String?
-  campsiteCategory String?
+  // Core display/search fields
+  name                   String
+  place                  String?
+  region                 String?
+  campsiteCategory       String?
+  introduction           String?
+  access                 String?
+  facilities             String?
+  dogsAllowed            String?
+  dogsAllowedBool        Boolean?
 
-  // Optional short introduction/description
-  introduction String?
-
-  // Stored in WGS84 (EPSG:4326)
-  lat Float
-  lon Float
+  // Search / derived flags from DOC facilities text
+  hasToilets             Boolean?
+  hasWater               Boolean?
+  hasPower               Boolean?
 
   // Capacity
-  numberOfPoweredSites Int @default(0)
-  numberOfUnpoweredSites Int @default(0)
+  numberOfPoweredSites   Int?
+  numberOfUnpoweredSites Int?
 
-  // Booking
-  bookable Boolean @default(false)
+  // Booking / permissions
+  bookable              Boolean
 
-  // Facilities (later we can parse from `facilities` string)
-  hasToilets Boolean @default(false)
-  hasWater Boolean @default(false)
-  hasPower Boolean @default(false)
+  // Media / links
+  staticLink            String?
+  imageUrl              String?
 
-  // Access
-  access String?
+  // Converted WGS84 coordinates (used by map/weather/distance)
+  lat                    Float
+  lon                    Float
 
-  // Raw facilities string (keep original for reference)
-  facilities String?
+  // Extra raw content for debugging / future UI
+  properties             String?
+  geometry               String?
 
-  // Links / images
-  staticLink String?
-  imageUrl String?
-
-  properties String?
-  geometry String?
-
-  createdAt DateTime @default(now())
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 
   @@unique([dataset, sourceId])
   @@index([dataset])
-  @@index([campsiteCategory])
+  @@index([name])
   @@index([region])
+  @@index([campsiteCategory])
+  @@index([access])
+  @@index([lat, lon])
 }
