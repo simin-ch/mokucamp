@@ -46,6 +46,25 @@ function toFloatOrNull(val) {
   return Number.isFinite(n) ? n : null
 }
 
+function toDogsAllowedBoolFromDoc(val) {
+  const v = toNullIfEmpty(val)
+  if (!v) return null
+  if (typeof v !== 'string') return null
+
+  const s = v.toLowerCase()
+
+  // DOC strings include HTML fragments; match keywords instead of exact equality.
+  if (s.includes('not applicable')) return null
+  if (s.includes('no dogs')) return false
+
+  // Any version of “allowed” / “leash only” / “permit only” should be selectable as true.
+  if (s.includes('dogs allowed')) return true
+  if (s.includes('leash only')) return true
+  if (s.includes('permit')) return true
+
+  return null
+}
+
 async function main() {
   // EPSG:2193 (NZGD2000 / NZTM2000) -> EPSG:4326 (WGS84)
   proj4.defs(
@@ -112,7 +131,7 @@ async function main() {
       const facilities = toNullIfEmpty(props.facilities)
       const facilitiesLower = typeof facilities === 'string' ? facilities.toLowerCase() : ''
 
-      // Simple heuristic; replace with more precise parsing/tokenization if needed
+      // replace with more precise parsing/tokenization if needed
       const hasToilets = facilitiesLower.includes('toilets') ? true : false
       const hasWater = facilitiesLower.includes('water') ? true : false
       const hasPower =
@@ -129,11 +148,13 @@ async function main() {
         introduction: toNullIfEmpty(props.introduction),
         access: toNullIfEmpty(props.access),
         facilities: toNullIfEmpty(props.facilities),
+        dogsAllowed: toNullIfEmpty(props.dogsAllowed),
+        dogsAllowedBool: toDogsAllowedBoolFromDoc(props.dogsAllowed),
 
         lat: wgs.lat,
         lon: wgs.lon,
 
-        // Defaults exist in schema, but we set booleans to be explicit.
+        // Defaults exist in schema, set booleans to be explicit.
         numberOfPoweredSites: toIntOrNull(props.numberOfPoweredSites),
         numberOfUnpoweredSites: toIntOrNull(props.numberOfUnpoweredSites),
         bookable: toBoolFromDocYesNo(props.bookable),
