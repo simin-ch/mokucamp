@@ -16,6 +16,10 @@ const DEFAULT_LIMIT = 312
  * Query params:
  *   - region: filter by region (exact match)
  *   - category: filter by campsiteCategory (exact match)
+ *   - dogsAllowedBool: filter by dogs allowed (true|false)
+ *   - hasToilets: filter by toilets (true|false)
+ *   - hasWater: filter by water (true|false)
+ *   - hasPower: filter by power (true|false)
  *   - q: search in name, place, region, access (substring)
  *   - limit: max items to return (default 312, max 500)
  *   - offset: items to skip for pagination (default 0)
@@ -25,6 +29,10 @@ router.get('/', async (req, res) => {
     const {
       region,
       category,
+      dogsAllowedBool,
+      hasToilets,
+      hasWater,
+      hasPower,
       q,
       limit,
       offset,
@@ -39,6 +47,14 @@ router.get('/', async (req, res) => {
     const where = {}
     if (region) where.region = String(region)
     if (category) where.campsiteCategory = String(category)
+    if (dogsAllowedBool === 'true') where.dogsAllowedBool = true
+    if (dogsAllowedBool === 'false') where.dogsAllowedBool = false
+    if (hasToilets === 'true') where.hasToilets = true
+    if (hasToilets === 'false') where.hasToilets = false
+    if (hasWater === 'true') where.hasWater = true
+    if (hasWater === 'false') where.hasWater = false
+    if (hasPower === 'true') where.hasPower = true
+    if (hasPower === 'false') where.hasPower = false
 
     if (q) {
       const s = `%${String(q)}%`
