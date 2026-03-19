@@ -5,7 +5,21 @@ const { PrismaClient } = require('@prisma/client')
 
 const prisma = new PrismaClient()
 
-// GET /api/campsites
+const MAX_LIMIT = 500
+const DEFAULT_LIMIT = 312
+
+/**
+ * GET /api/campsites
+ *
+ * Returns the full campsite list from the database with basic query support.
+ *
+ * Query params:
+ *   - region: filter by region (exact match)
+ *   - category: filter by campsiteCategory (exact match)
+ *   - q: search in name, place, region, access (substring)
+ *   - limit: max items to return (default 312, max 500)
+ *   - offset: items to skip for pagination (default 0)
+ */
 router.get('/', async (req, res) => {
   try {
     const {
@@ -16,42 +30,37 @@ router.get('/', async (req, res) => {
       offset,
     } = req.query || {}
 
-    const take = Number(limit) > 0 ? Number(limit) : 50
+    const rawLimit = Number(limit)
+    const take = rawLimit > 0
+      ? Math.min(rawLimit, MAX_LIMIT)
+      : DEFAULT_LIMIT
     const skip = Number(offset) > 0 ? Number(offset) : 0
 
     const where = {}
     if (region) where.region = String(region)
     if (category) where.campsiteCategory = String(category)
 
-    // Simple full-text-ish search across name/place/region/access
     if (q) {
       const s = `%${String(q)}%`
       where.OR = [
-        { name: { contains: s, mode: 'insensitive' } },
-        { place: { contains: s, mode: 'insensitive' } },
-        { region: { contains: s, mode: 'insensitive' } },
-        { access: { contains: s, mode: 'insensitive' } },
+        { name: { contains: s } },
+        { place: { contains: s } },
+        { region: { contains: s } },
+        { access: { contains: s } },
       ]
     }
 
-    const data = await prisma.campsite.findMany({
-      where,
-      take,
-      skip,
-      orderBy: { id: 'asc' },
-      select: {
-        sourceId: true,
-        name: true,
-        place: true,
-        region: true,
-        campsiteCategory: true,
-        lat: true,
-        lon: true,
-        bookable: true,
-      },
-    })
+    const [data, total] = await Promise.all([
+      prisma.campsite.findMany({
+        where,
+        take,
+        skip,
+        orderBy: { id: 'asc' },
+      }),
+      prisma.campsite.count({ where }),
+    ])
 
-    res.json({ data })
+    res.json({ data, total })
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error(err)
