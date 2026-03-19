@@ -51,18 +51,38 @@ function toDogsAllowedBoolFromDoc(val) {
   if (!v) return null
   if (typeof v !== 'string') return null
 
-  const s = v.toLowerCase()
-
-  // DOC strings include HTML fragments; match keywords instead of exact equality.
-  if (s.includes('not applicable')) return null
-  if (s.includes('no dogs')) return false
+  const s = v.trim()
+  if (!s) return null
+  if (s.startsWith('Not Applicable')) return null
+  if (s.startsWith('No dogs')) return false
 
   // Any version of “allowed” / “leash only” / “permit only” should be selectable as true.
-  if (s.includes('dogs allowed')) return true
-  if (s.includes('leash only')) return true
-  if (s.includes('permit')) return true
+  if (s.startsWith('Dogs on a leash only')) return true
+  if (s.startsWith('Dogs with a DOC permit')) return true
+  if (s.startsWith('Dogs allowed')) return true
 
   return null
+}
+
+// DOC facilities: comma-separated tokens. Exact token match.
+// Toilets: "Toilets" | "Toilets - flush" | "Toilets - non-flush"
+// Water: "Water supply" | "Water from tap - ..." | "Water from stream"
+// Power: "Powered sites" only (NOT "Non-powered/tent sites")
+function parseFacilityFlags(facilitiesStr) {
+  const tokens = (toNullIfEmpty(facilitiesStr) || '')
+    .split(',')
+    .map((t) => t.trim())
+    .filter(Boolean)
+
+  const hasToilets =
+    tokens.some((t) => t === 'Toilets' || t.startsWith('Toilets -')) || false
+  const hasWater =
+    tokens.some(
+      (t) => t === 'Water supply' || t.startsWith('Water from ')
+    ) || false
+  const hasPower = tokens.some((t) => t === 'Powered sites') || false
+
+  return { hasToilets, hasWater, hasPower }
 }
 
 async function main() {
@@ -129,13 +149,7 @@ async function main() {
       if (!wgs) continue
 
       const facilities = toNullIfEmpty(props.facilities)
-      const facilitiesLower = typeof facilities === 'string' ? facilities.toLowerCase() : ''
-
-      // replace with more precise parsing/tokenization if needed
-      const hasToilets = facilitiesLower.includes('toilets') ? true : false
-      const hasWater = facilitiesLower.includes('water') ? true : false
-      const hasPower =
-        facilitiesLower.includes('powered') || facilitiesLower.includes('power') ? true : false
+      const { hasToilets, hasWater, hasPower } = parseFacilityFlags(facilities)
 
       batch.push({
         dataset,
