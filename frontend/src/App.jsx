@@ -3,7 +3,7 @@ import CampsiteList from './components/CampsiteList'
 import SearchForm from './components/SearchForm'
 import { useCampsites } from './hooks/useCampsites'
 import { useGeocode } from './hooks/useGeocode'
-import { initialForm, PAGE_SIZE } from './utils/queryString'
+import { defaultTripDate, initialForm, PAGE_SIZE } from './utils/queryString'
 
 export default function App() {
   const geocode = useGeocode()
@@ -23,7 +23,7 @@ export default function App() {
   }
 
   function handleReset() {
-    setForm(initialForm)
+    setForm({ ...initialForm, date: defaultTripDate() })
     setResult(null)
     setError(null)
     geocode.clearLocation()
@@ -62,6 +62,7 @@ export default function App() {
           canNext={canNext}
           onPrev={() => pageDelta(-PAGE_SIZE)}
           onNext={() => pageDelta(PAGE_SIZE)}
+          tripDate={form.date}
         />
       </main>
     </div>

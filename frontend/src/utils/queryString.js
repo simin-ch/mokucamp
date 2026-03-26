@@ -2,6 +2,24 @@ export const PAGE_SIZE = 50
 
 export const emptyBool = ''
 
+export function formatLocalDate(d) {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+export function defaultTripDate() {
+  return formatLocalDate(new Date())
+}
+
+/** Today + 10 days (inclusive window for trip picker). */
+export function maxTripDate() {
+  const d = new Date()
+  d.setDate(d.getDate() + 10)
+  return formatLocalDate(d)
+}
+
 export const initialForm = {
   dogsAllowedBool: emptyBool,
   hasToilets: emptyBool,
@@ -9,6 +27,7 @@ export const initialForm = {
   hasPower: emptyBool,
   offset: '0',
   radiusKm: '100',
+  date: defaultTripDate(),
 }
 
 export function buildQueryString(form, place) {
@@ -25,6 +44,9 @@ export function buildQueryString(form, place) {
     p.set('lon', String(place.lon))
     const radiusKm = Number(form.radiusKm)
     if (radiusKm > 0) p.set('radiusKm', String(radiusKm))
+  }
+  if (form.date) {
+    p.set('date', form.date)
   }
   return p.toString()
 }

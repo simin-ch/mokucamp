@@ -1,13 +1,39 @@
 import FacilityFilters from './FacilityFilters'
 import LocationSearch from './LocationSearch'
+import { formatLocalDate, maxTripDate } from '../utils/queryString'
 
 export default function SearchForm({ geocode, form, setForm, loading, onSubmit, onReset }) {
+  const minDate = formatLocalDate(new Date())
+  const maxDate = maxTripDate()
+
   return (
     <form
       onSubmit={onSubmit}
       className="mb-8 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm"
     >
       <div className="space-y-5">
+        <div>
+          <label
+            htmlFor="trip-date"
+            className="block text-sm font-medium text-stone-700"
+          >
+            Trip date
+          </label>
+          <input
+            id="trip-date"
+            type="date"
+            name="date"
+            required
+            value={form.date ?? ''}
+            min={minDate}
+            max={maxDate}
+            onChange={(e) => setForm((s) => ({ ...s, date: e.target.value }))}
+            className="mt-1.5 w-full max-w-xs rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+          />
+          <p className="mt-1 text-xs text-stone-500">
+            Weather forecast is loaded for the selected day (today through the next 10 days).
+          </p>
+        </div>
         <LocationSearch
           {...geocode}
           radiusKm={form.radiusKm}

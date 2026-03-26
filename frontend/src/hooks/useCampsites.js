@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react'
 import { buildQueryString, initialForm } from '../utils/queryString'
 
 export function useCampsites() {
-  const [form, setForm] = useState(initialForm)
+  const [form, setForm] = useState(() => ({ ...initialForm }))
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [result, setResult] = useState(null)
