@@ -9,6 +9,20 @@ const MAX_LIMIT = 500
 const DEFAULT_LIMIT = 312
 
 /**
+ * Haversine great-circle distance between two WGS84 coordinates, in kilometres.
+ */
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const R = 6371
+  const toRad = (d) => (d * Math.PI) / 180
+  const dLat = toRad(lat2 - lat1)
+  const dLon = toRad(lon2 - lon1)
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2
+  return R * 2 * Math.asin(Math.sqrt(a))
+}
+
+/**
  * GET /api/campsites
  *
  * Returns the full campsite list from the database with basic query support.
@@ -23,6 +37,9 @@ const DEFAULT_LIMIT = 312
  *   - q: search in name, place, region, access (substring)
  *   - limit: max items to return (default 312, max 500)
  *   - offset: items to skip for pagination (default 0)
+ *   - lat: centre latitude for distance filtering (WGS84)
+ *   - lon: centre longitude for distance filtering (WGS84)
+ *   - radiusKm: include only campsites within this radius; results sorted by distance
  */
 router.get('/', async (req, res) => {
   try {
@@ -36,6 +53,9 @@ router.get('/', async (req, res) => {
       q,
       limit,
       offset,
+      lat,
+      lon,
+      radiusKm,
     } = req.query || {}
 
     const rawLimit = Number(limit)
@@ -43,6 +63,12 @@ router.get('/', async (req, res) => {
       ? Math.min(rawLimit, MAX_LIMIT)
       : DEFAULT_LIMIT
     const skip = Number(offset) > 0 ? Number(offset) : 0
+
+    const centerLat = parseFloat(lat)
+    const centerLon = parseFloat(lon)
+    const radius = parseFloat(radiusKm)
+    const useDistance =
+      !isNaN(centerLat) && !isNaN(centerLon) && !isNaN(radius) && radius > 0
 
     const where = {}
     if (region) where.region = String(region)
@@ -64,6 +90,25 @@ router.get('/', async (req, res) => {
         { region: { contains: s } },
         { access: { contains: s } },
       ]
+    }
+
+    if (useDistance) {
+      // Fetch all candidates matching other filters, then apply Haversine in JS.
+      // For the current dataset size this is fast; swap for a bounding-box pre-filter
+      // if the table grows significantly.
+      const all = await prisma.campsite.findMany({ where, orderBy: { id: 'asc' } })
+      const filtered = all
+        .map((c) => ({
+          ...c,
+          distanceKm: Math.round(haversineKm(centerLat, centerLon, c.lat, c.lon) * 10) / 10,
+        }))
+        .filter((c) => c.distanceKm <= radius)
+        .sort((a, b) => a.distanceKm - b.distanceKm)
+
+      return res.json({
+        data: filtered.slice(skip, skip + take),
+        total: filtered.length,
+      })
     }
 
     const [data, total] = await Promise.all([
