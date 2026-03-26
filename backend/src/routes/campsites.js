@@ -2,6 +2,7 @@ const express = require('express')
 
 const router = express.Router()
 const { PrismaClient } = require('@prisma/client')
+const { fetchWeather } = require('../utils/weather')
 
 const prisma = new PrismaClient()
 
@@ -40,7 +41,23 @@ function haversineKm(lat1, lon1, lat2, lon2) {
  *   - lat: centre latitude for distance filtering (WGS84)
  *   - lon: centre longitude for distance filtering (WGS84)
  *   - radiusKm: include only campsites within this radius; results sorted by distance
+ *   - date: YYYY-MM-DD; when set, single-day forecast is attached per campsite
  */
+const TRIP_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+
+async function attachWeather(rows, tripDate) {
+  return Promise.all(
+    rows.map(async (c) => {
+      try {
+        const daily = await fetchWeather(c.lat, c.lon, tripDate)
+        return { ...c, weather: daily }
+      } catch {
+        return { ...c, weather: null }
+      }
+    }),
+  )
+}
+
 router.get('/', async (req, res) => {
   try {
     const {
@@ -56,7 +73,12 @@ router.get('/', async (req, res) => {
       lat,
       lon,
       radiusKm,
+      date: dateQuery,
     } = req.query || {}
+
+    const tripDateRaw = dateQuery != null && String(dateQuery).trim() !== '' ? String(dateQuery).trim() : null
+    const wantWeather = Boolean(tripDateRaw && TRIP_DATE_RE.test(tripDateRaw))
+    const tripDate = wantWeather ? tripDateRaw : null
 
     const rawLimit = Number(limit)
     const take = rawLimit > 0
@@ -105,13 +127,16 @@ router.get('/', async (req, res) => {
         .filter((c) => c.distanceKm <= radius)
         .sort((a, b) => a.distanceKm - b.distanceKm)
 
+      const page = filtered.slice(skip, skip + take)
+      const data = wantWeather ? await attachWeather(page, tripDate) : page
+
       return res.json({
-        data: filtered.slice(skip, skip + take),
+        data,
         total: filtered.length,
       })
     }
 
-    const [data, total] = await Promise.all([
+    const [rows, total] = await Promise.all([
       prisma.campsite.findMany({
         where,
         take,
@@ -120,6 +145,8 @@ router.get('/', async (req, res) => {
       }),
       prisma.campsite.count({ where }),
     ])
+
+    const data = wantWeather ? await attachWeather(rows, tripDate) : rows
 
     res.json({ data, total })
   } catch (err) {
