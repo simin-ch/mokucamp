@@ -27,7 +27,7 @@ export default function LocationSearch({
           type="text"
           value={locationInput}
           onChange={handleLocationChange}
-          onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+          onFocus={() => !selectedPlace && suggestions.length > 0 && setShowSuggestions(true)}
           onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
           placeholder="Type at least 3 characters…"
           className="w-full rounded-lg border border-stone-200 px-3 py-2 pr-20 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"

@@ -5,6 +5,9 @@ export function useGeocode() {
   const [suggestions, setSuggestions] = useState([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [selectedPlace, setSelectedPlace] = useState(null)
+  // After selecting a suggestion, the debounced effect will run once more
+  // (because locationInput is updated). Suppress opening the dropdown again.
+  const [suppressNextOpen, setSuppressNextOpen] = useState(false)
   const [geocodeLoading, setGeocodeLoading] = useState(false)
   const [geocodeError, setGeocodeError] = useState(null)
   const inputRef = useRef(null)
@@ -30,7 +33,7 @@ export function useGeocode() {
         }
         const list = Array.isArray(data) ? data : []
         setSuggestions(list)
-        setShowSuggestions(list.length > 0)
+        setShowSuggestions(list.length > 0 && !suppressNextOpen)
         if (list.length === 0) setGeocodeError('No results found. Try a different place name.')
       } catch {
         setGeocodeError('Address search failed. Is the backend running on port 4000?')
@@ -44,11 +47,13 @@ export function useGeocode() {
       clearTimeout(timer)
       setGeocodeLoading(false)
     }
-  }, [locationInput])
+  }, [locationInput, suppressNextOpen])
 
   function handleLocationChange(e) {
     const val = e.target.value
     setLocationInput(val)
+    // User is typing again; allow the dropdown to open.
+    setSuppressNextOpen(false)
     setGeocodeError(null)
     if (!val) {
       setSelectedPlace(null)
@@ -63,6 +68,7 @@ export function useGeocode() {
     setLocationInput(s.displayName)
     setShowSuggestions(false)
     setSuggestions([])
+    setSuppressNextOpen(true)
   }
 
   function clearLocation() {
@@ -70,6 +76,7 @@ export function useGeocode() {
     setSelectedPlace(null)
     setSuggestions([])
     setShowSuggestions(false)
+    setSuppressNextOpen(false)
     setGeocodeError(null)
   }
 
