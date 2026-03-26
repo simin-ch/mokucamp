@@ -9,6 +9,7 @@ export default function CampsiteList({
   canNext,
   onPrev,
   onNext,
+  tripDate,
 }) {
   if (error) {
     return (
@@ -74,7 +75,7 @@ export default function CampsiteList({
       ) : (
         <ul className="space-y-4">
           {result.data.map((c) => (
-            <CampsiteCard key={c.id} campsite={c} />
+            <CampsiteCard key={c.id} campsite={c} tripDate={tripDate} />
           ))}
         </ul>
       )}
