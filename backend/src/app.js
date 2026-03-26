@@ -2,6 +2,7 @@ const express = require('express')
 const cors = require('cors')
 
 const campsitesRouter = require('./routes/campsites')
+const geocodeRouter = require('./routes/geocode')
 const recommendRouter = require('./routes/recommend')
 const weatherRouter = require('./routes/weather')
 
@@ -15,6 +16,7 @@ app.get('/health', (req, res) => {
 })
 
 app.use('/api/campsites', campsitesRouter)
+app.use('/api/geocode', geocodeRouter)
 app.use('/api/recommend', recommendRouter)
 app.use('/api/weather', weatherRouter)
 
