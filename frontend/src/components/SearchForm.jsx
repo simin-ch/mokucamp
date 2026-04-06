@@ -1,4 +1,5 @@
 import FacilityFilters from './FacilityFilters'
+import LandscapePreference from './LandscapePreference'
 import LocationSearch from './LocationSearch'
 import { formatLocalDate, maxTripDate } from '../utils/queryString'
 
@@ -42,6 +43,10 @@ export default function SearchForm({ geocode, form, setForm, loading, onSubmit, 
         <FacilityFilters
           form={form}
           onChange={(key, val) => setForm((s) => ({ ...s, [key]: val }))}
+        />
+        <LandscapePreference
+          selected={form.landscapes ?? []}
+          onChange={(val) => setForm((s) => ({ ...s, landscapes: val }))}
         />
       </div>
 

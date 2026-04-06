@@ -39,6 +39,11 @@ export default function CampsiteCard({ campsite: c, tripDate }) {
               {c.campsiteCategory}
             </span>
           )}
+          {c.landscape && c.landscape.split(',').map((l) => (
+            <span key={l} className="rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-medium text-teal-700">
+              {l.trim()}
+            </span>
+          ))}
           {c.bookable && (
             <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800">
               Bookable

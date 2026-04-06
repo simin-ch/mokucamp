@@ -40,6 +40,12 @@ export default function CampsiteList({
 
   return (
     <>
+      {result.landscapeNotFound && (
+        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <p className="font-medium">No campsites match your selected landscape in this area.</p>
+          <p className="mt-0.5">Here are other campsites nearby you might like.</p>
+        </div>
+      )}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2 text-sm text-stone-600">
         <p>
           Showing{' '}
