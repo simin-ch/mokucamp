@@ -42,6 +42,7 @@ function haversineKm(lat1, lon1, lat2, lon2) {
  *   - lon: centre longitude for distance filtering (WGS84)
  *   - radiusKm: include only campsites within this radius; results sorted by distance
  *   - date: YYYY-MM-DD; when set, single-day forecast is attached per campsite
+ *   - landscape: filter to campsites whose landscape field contains this value (e.g. "Coastal")
  */
 const TRIP_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 
@@ -67,6 +68,7 @@ router.get('/', async (req, res) => {
       hasToilets,
       hasWater,
       hasPower,
+      landscape,
       q,
       limit,
       offset,
@@ -92,21 +94,21 @@ router.get('/', async (req, res) => {
     const useDistance =
       !isNaN(centerLat) && !isNaN(centerLon) && !isNaN(radius) && radius > 0
 
-    const where = {}
-    if (region) where.region = String(region)
-    if (category) where.campsiteCategory = String(category)
-    if (dogsAllowedBool === 'true') where.dogsAllowedBool = true
-    if (dogsAllowedBool === 'false') where.dogsAllowedBool = false
-    if (hasToilets === 'true') where.hasToilets = true
-    if (hasToilets === 'false') where.hasToilets = false
-    if (hasWater === 'true') where.hasWater = true
-    if (hasWater === 'false') where.hasWater = false
-    if (hasPower === 'true') where.hasPower = true
-    if (hasPower === 'false') where.hasPower = false
-
+    // Base conditions (no landscape filter) — used for fallback queries
+    const whereBase = {}
+    if (region) whereBase.region = String(region)
+    if (category) whereBase.campsiteCategory = String(category)
+    if (dogsAllowedBool === 'true') whereBase.dogsAllowedBool = true
+    if (dogsAllowedBool === 'false') whereBase.dogsAllowedBool = false
+    if (hasToilets === 'true') whereBase.hasToilets = true
+    if (hasToilets === 'false') whereBase.hasToilets = false
+    if (hasWater === 'true') whereBase.hasWater = true
+    if (hasWater === 'false') whereBase.hasWater = false
+    if (hasPower === 'true') whereBase.hasPower = true
+    if (hasPower === 'false') whereBase.hasPower = false
     if (q) {
       const s = `%${String(q)}%`
-      where.OR = [
+      whereBase.OR = [
         { name: { contains: s } },
         { place: { contains: s } },
         { region: { contains: s } },
@@ -114,18 +116,48 @@ router.get('/', async (req, res) => {
       ]
     }
 
+    // landscape param accepts comma-separated values (e.g. "Coastal,Forest")
+    const landscapeValues = landscape
+      ? String(landscape).split(',').map((s) => s.trim()).filter(Boolean)
+      : []
+    const landscapeFilter = landscapeValues.length > 0 ? landscapeValues : null
+
+    // Full where clause: add landscape as AND condition so it doesn't conflict with q OR
+    const where = landscapeFilter
+      ? {
+          ...whereBase,
+          AND: [
+            ...(whereBase.AND ?? []),
+            { OR: landscapeFilter.map((v) => ({ landscape: { contains: v } })) },
+          ],
+        }
+      : whereBase
+
     if (useDistance) {
       // Fetch all candidates matching other filters, then apply Haversine in JS.
       // For the current dataset size this is fast; swap for a bounding-box pre-filter
       // if the table grows significantly.
-      const all = await prisma.campsite.findMany({ where, orderBy: { id: 'asc' } })
-      const filtered = all
-        .map((c) => ({
-          ...c,
-          distanceKm: Math.round(haversineKm(centerLat, centerLon, c.lat, c.lon) * 10) / 10,
-        }))
-        .filter((c) => c.distanceKm <= radius)
-        .sort((a, b) => a.distanceKm - b.distanceKm)
+      const applyRadius = (rows) =>
+        rows
+          .map((c) => ({
+            ...c,
+            distanceKm: Math.round(haversineKm(centerLat, centerLon, c.lat, c.lon) * 10) / 10,
+          }))
+          .filter((c) => c.distanceKm <= radius)
+          .sort((a, b) => a.distanceKm - b.distanceKm)
+
+      let filtered = applyRadius(
+        await prisma.campsite.findMany({ where, orderBy: { id: 'asc' } }),
+      )
+      let landscapeNotFound = false
+
+      // No matching landscape within radius → fall back to all landscapes and notify
+      if (landscapeFilter && filtered.length === 0) {
+        filtered = applyRadius(
+          await prisma.campsite.findMany({ where: whereBase, orderBy: { id: 'asc' } }),
+        )
+        landscapeNotFound = true
+      }
 
       const page = filtered.slice(skip, skip + take)
       const data = wantWeather ? await attachWeather(page, tripDate) : page
@@ -133,22 +165,28 @@ router.get('/', async (req, res) => {
       return res.json({
         data,
         total: filtered.length,
+        landscapeNotFound,
       })
     }
 
-    const [rows, total] = await Promise.all([
-      prisma.campsite.findMany({
-        where,
-        take,
-        skip,
-        orderBy: { id: 'asc' },
-      }),
+    let [rows, total] = await Promise.all([
+      prisma.campsite.findMany({ where, take, skip, orderBy: { id: 'asc' } }),
       prisma.campsite.count({ where }),
     ])
+    let landscapeNotFound = false
+
+    // No matching landscape → fall back to all landscapes and notify
+    if (landscapeFilter && total === 0) {
+      ;[rows, total] = await Promise.all([
+        prisma.campsite.findMany({ where: whereBase, take, skip, orderBy: { id: 'asc' } }),
+        prisma.campsite.count({ where: whereBase }),
+      ])
+      landscapeNotFound = true
+    }
 
     const data = wantWeather ? await attachWeather(rows, tripDate) : rows
 
-    res.json({ data, total })
+    res.json({ data, total, landscapeNotFound })
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error(err)
