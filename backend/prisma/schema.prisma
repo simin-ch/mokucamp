@@ -24,6 +24,10 @@ model Campsite {
   dogsAllowed            String?
   dogsAllowedBool        Boolean?
 
+  // Landscape / activity tags (sourced from DOC GeoJSON)
+  landscape              String?
+  activities             String?
+
   // Search / derived flags from DOC facilities text
   hasToilets             Boolean?
   hasWater               Boolean?
