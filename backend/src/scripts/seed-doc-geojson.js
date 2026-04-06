@@ -177,6 +177,9 @@ async function main() {
         hasWater,
         hasPower,
 
+        landscape: toNullIfEmpty(props.landscape),
+        activities: toNullIfEmpty(props.activities),
+
         staticLink: toNullIfEmpty(props.staticLink),
         imageUrl: toNullIfEmpty(props.introductionThumbnail),
 
