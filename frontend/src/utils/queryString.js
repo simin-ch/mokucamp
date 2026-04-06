@@ -20,22 +20,34 @@ export function maxTripDate() {
   return formatLocalDate(d)
 }
 
+export const LANDSCAPE_OPTIONS = [
+  { value: 'Coastal', label: 'Coastal' },
+  { value: 'Forest', label: 'Forest' },
+  { value: 'Alpine', label: 'Alpine' },
+  { value: 'Rivers and lakes', label: 'Rivers & Lakes' },
+]
+
 export const initialForm = {
   dogsAllowedBool: emptyBool,
   hasToilets: emptyBool,
   hasWater: emptyBool,
   hasPower: emptyBool,
+  landscapes: [],
   offset: '0',
   radiusKm: '100',
   date: defaultTripDate(),
 }
 
-export function buildQueryString(form, place) {
-  const p = new URLSearchParams()
+function appendFacilityParams(p, form) {
   if (form.dogsAllowedBool) p.set('dogsAllowedBool', form.dogsAllowedBool)
   if (form.hasToilets) p.set('hasToilets', form.hasToilets)
   if (form.hasWater) p.set('hasWater', form.hasWater)
   if (form.hasPower) p.set('hasPower', form.hasPower)
+}
+
+export function buildQueryString(form, place) {
+  const p = new URLSearchParams()
+  appendFacilityParams(p, form)
   p.set('limit', String(PAGE_SIZE))
   const offset = Number(form.offset)
   if (offset > 0) p.set('offset', String(offset))
@@ -45,8 +57,37 @@ export function buildQueryString(form, place) {
     const radiusKm = Number(form.radiusKm)
     if (radiusKm > 0) p.set('radiusKm', String(radiusKm))
   }
-  if (form.date) {
-    p.set('date', form.date)
+  if (form.date) p.set('date', form.date)
+  if (form.landscapes?.length) p.set('landscape', form.landscapes.join(','))
+  return p.toString()
+}
+
+export function buildMapQueryString(form, place) {
+  const p = new URLSearchParams()
+  appendFacilityParams(p, form)
+  p.set('limit', '500')
+  if (place) {
+    p.set('lat', String(place.lat))
+    p.set('lon', String(place.lon))
+    const radiusKm = Number(form.radiusKm)
+    if (radiusKm > 0) p.set('radiusKm', String(radiusKm))
   }
+  if (form.date) p.set('date', form.date)
+  if (form.landscapes?.length) p.set('landscape', form.landscapes.join(','))
+  return p.toString()
+}
+
+export function buildRecommendQueryString(form, place) {
+  const p = new URLSearchParams()
+  appendFacilityParams(p, form)
+  if (place) {
+    p.set('lat', String(place.lat))
+    p.set('lon', String(place.lon))
+    const radiusKm = Number(form.radiusKm)
+    if (radiusKm > 0) p.set('radiusKm', String(radiusKm))
+  }
+  if (form.date) p.set('date', form.date)
+  if (form.landscapes?.length) p.set('landscapes', form.landscapes.join(','))
+  p.set('limit', '5')
   return p.toString()
 }
