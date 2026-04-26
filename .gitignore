@@ -140,3 +140,6 @@ vite.config.ts.timestamp-*
 
 # SQLite databases
 *.db
+
+# macOS
+.DS_Store
