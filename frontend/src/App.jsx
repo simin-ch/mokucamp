@@ -6,15 +6,18 @@ import RecommendList from './components/RecommendList'
 import SearchForm from './components/SearchForm'
 import { useCampsites } from './hooks/useCampsites'
 import { useGeocode } from './hooks/useGeocode'
+import { useMinWidthSm } from './hooks/useMinWidthSm'
 import { useRecommend } from './hooks/useRecommend'
 import { defaultTripDate, initialForm, PAGE_SIZE } from './utils/queryString'
 
 export default function App() {
+  const isMinWidthSm = useMinWidthSm()
   const geocode = useGeocode()
   const { form, setForm, loading, error, setError, result, setResult, mapResult, setMapResult, fetchCampsites } =
     useCampsites()
   const recommend = useRecommend()
   const [listOpen, setListOpen] = useState(true)
+  const [mapOpen, setMapOpen] = useState(false)
 
   const offset = Number(form.offset) || 0
   const total = result?.total ?? 0
@@ -22,6 +25,14 @@ export default function App() {
   const canNext = offset + PAGE_SIZE < total
 
   const showMap = Boolean(mapResult || recommend.result)
+  /** Avoid mounting Leaflet inside `display: none` (default collapsed on small screens). */
+  const mapShouldMount = showMap && (isMinWidthSm || mapOpen)
+  const hasSecondaryContent = Boolean(
+    showMap || result || error || recommend.result || recommend.error,
+  )
+  const searchShellClass = hasSecondaryContent
+    ? 'mx-auto max-w-3xl px-6 py-8'
+    : 'flex min-h-[calc(100dvh-4.5rem)] flex-col items-center justify-center px-6 py-8'
 
   function handleSubmit(e) {
     e.preventDefault()
@@ -48,35 +59,53 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-100 text-stone-900">
-      <header className="border-b border-stone-200 bg-white/80 backdrop-blur">
+    <div className="min-h-screen bg-fixed bg-cover bg-center bg-no-repeat bg-stone-200 text-stone-900 [background-image:url('/images/backgroundimage.png')]">
+      <header className="border-b border-stone-200/80 bg-white/85 backdrop-blur">
         <div className="mx-auto max-w-3xl px-6 py-4">
           <h1 className="text-lg font-semibold tracking-tight">Mokucamp · Find Campsites</h1>
         </div>
       </header>
 
       <main>
-        {/* Search form — centred narrow column */}
-        <div className="mx-auto max-w-3xl px-6 py-8">
-          <SearchForm
-            geocode={geocode}
-            form={form}
-            setForm={setForm}
-            loading={loading}
-            onSubmit={handleSubmit}
-            onReset={handleReset}
-          />
+        <div className={searchShellClass}>
+          <div className="mx-auto w-full max-w-xl">
+            <SearchForm
+              geocode={geocode}
+              form={form}
+              setForm={setForm}
+              loading={loading}
+              onSubmit={handleSubmit}
+              onReset={handleReset}
+            />
+          </div>
         </div>
 
-        {/* Map — full width, shown once there are results */}
+        {/* Map — full width; collapsible toggle on small screens only */}
         {showMap && (
           <div className="px-4 pb-6 sm:px-6">
-            <CampsiteMap
-              mapResult={mapResult}
-              recommendResult={recommend.result}
-              selectedPlace={geocode.selectedPlace}
-              radiusKm={form.radiusKm}
-            />
+            <button
+              type="button"
+              aria-expanded={mapOpen}
+              aria-controls="campsite-map-panel"
+              onClick={() => setMapOpen((v) => !v)}
+              className="mb-4 flex w-full items-center justify-between rounded-xl border border-stone-200/90 bg-white/85 px-4 py-2.5 text-sm font-medium text-stone-700 shadow-sm backdrop-blur-sm hover:bg-white/92 sm:hidden"
+            >
+              <span>Map</span>
+              <span className="text-stone-400">{mapOpen ? '▲' : '▼'}</span>
+            </button>
+            <div
+              id="campsite-map-panel"
+              className={mapShouldMount ? 'block' : 'hidden sm:block'}
+            >
+              {mapShouldMount && (
+                <CampsiteMap
+                  mapResult={mapResult}
+                  recommendResult={recommend.result}
+                  selectedPlace={geocode.selectedPlace}
+                  radiusKm={form.radiusKm}
+                />
+              )}
+            </div>
           </div>
         )}
 
@@ -99,7 +128,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => setListOpen((v) => !v)}
-              className="mb-4 flex w-full items-center justify-between rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm font-medium text-stone-700 shadow-sm hover:bg-stone-50"
+              className="mb-4 flex w-full items-center justify-between rounded-xl border border-stone-200/90 bg-white/85 px-4 py-2.5 text-sm font-medium text-stone-700 shadow-sm backdrop-blur-sm hover:bg-white/92"
             >
               <span>
                 {result

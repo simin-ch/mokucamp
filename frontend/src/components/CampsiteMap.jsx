@@ -126,6 +126,21 @@ function FlyToLocation({ place }) {
   return null
 }
 
+/** Leaflet needs a size refresh when the container was hidden or resized (e.g. mobile fold). */
+function MapResizeSync() {
+  const map = useMap()
+  useEffect(() => {
+    const el = map.getContainer()
+    if (!el) return
+    const ro = new ResizeObserver(() => {
+      map.invalidateSize({ animate: false })
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [map])
+  return null
+}
+
 const NZ_CENTER = [-41.2, 173.2]
 const NZ_ZOOM = 5
 
@@ -152,6 +167,8 @@ export default function CampsiteMap({ mapResult, recommendResult, selectedPlace,
         />
 
         {selectedPlace && <FlyToLocation place={selectedPlace} />}
+
+        <MapResizeSync />
 
         {selectedPlace && radiusM && (
           <Circle

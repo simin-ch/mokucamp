@@ -28,7 +28,7 @@ export default function CampsiteList({
 
   if (!result && !loading) {
     return (
-      <p className="rounded-xl border border-dashed border-stone-300 bg-white/50 py-12 text-center text-stone-500">
+      <p className="rounded-xl border border-dashed border-stone-300/90 bg-white/80 py-12 text-center text-stone-500 backdrop-blur-sm">
         Set filters and click <strong className="text-stone-700">Search</strong> to find campsites.
       </p>
     )
@@ -59,7 +59,7 @@ export default function CampsiteList({
             type="button"
             disabled={!canPrev || loading}
             onClick={onPrev}
-            className="rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-sm font-medium hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-lg border border-stone-200/90 bg-white/80 px-3 py-1.5 text-sm font-medium backdrop-blur-sm hover:bg-white/92 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Previous
           </button>
@@ -67,7 +67,7 @@ export default function CampsiteList({
             type="button"
             disabled={!canNext || loading}
             onClick={onNext}
-            className="rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-sm font-medium hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-lg border border-stone-200/90 bg-white/80 px-3 py-1.5 text-sm font-medium backdrop-blur-sm hover:bg-white/92 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Next
           </button>
@@ -75,7 +75,7 @@ export default function CampsiteList({
       </div>
 
       {result.data.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-stone-300 bg-white/50 py-12 text-center text-stone-500">
+        <p className="rounded-xl border border-dashed border-stone-300/90 bg-white/80 py-12 text-center text-stone-500 backdrop-blur-sm">
           No campsites match your filters.
         </p>
       ) : (

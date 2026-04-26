@@ -20,7 +20,7 @@ export default function FacilityFilters({ form, onChange }) {
             <select
               value={form[key]}
               onChange={(e) => onChange(key, e.target.value)}
-              className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
+              className="w-full rounded-lg border border-stone-200/90 bg-white/90 px-3 py-2 text-sm outline-none backdrop-blur-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
             >
               <option value={emptyBool}>Any</option>
               <option value="true">Yes</option>

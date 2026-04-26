@@ -38,9 +38,13 @@ export default function RecommendList({ result, error, loading, tripDate, onClea
   if (result.landscapeNotFound) {
     return (
       <section className="mb-8">
-        <div className="flex items-center justify-between mb-3">
+        <div className="mb-3 flex items-center justify-between gap-3 rounded-2xl border border-stone-200/90 bg-white/85 p-4 shadow-sm backdrop-blur-sm sm:p-5">
           <h2 className="text-base font-semibold text-stone-900">✦ Top Picks</h2>
-          <button type="button" onClick={onClear} className="text-xs text-stone-400 hover:text-stone-700">
+          <button
+            type="button"
+            onClick={onClear}
+            className="shrink-0 rounded-lg border border-stone-200/90 bg-white/75 px-3 py-1.5 text-xs font-medium text-stone-600 backdrop-blur-sm hover:bg-white/90"
+          >
             Dismiss
           </button>
         </div>
@@ -54,44 +58,49 @@ export default function RecommendList({ result, error, loading, tripDate, onClea
 
   return (
     <section className="mb-8">
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h2 className="text-base font-semibold text-stone-900">
-            ✦ Top Picks
-            <span className="ml-2 text-sm font-normal text-stone-500">
-              — ranked by distance, weather, landscape &amp; facilities
-            </span>
-          </h2>
-        </div>
+      <div className="mb-4 flex items-start justify-between gap-3 rounded-2xl border border-stone-200/90 bg-white/85 p-4 shadow-sm backdrop-blur-sm sm:p-5">
+        <h2 className="min-w-0 text-base font-semibold text-stone-900">
+          ✦ Top Picks
+          <span className="mt-0.5 block text-sm font-normal text-stone-500 sm:mt-0 sm:ml-2 sm:inline">
+            — ranked by distance, weather, landscape &amp; facilities
+          </span>
+        </h2>
         <button
           type="button"
           onClick={onClear}
-          className="text-xs text-stone-400 hover:text-stone-700"
+          className="shrink-0 rounded-lg border border-stone-200/90 bg-white/75 px-3 py-1.5 text-xs font-medium text-stone-600 backdrop-blur-sm hover:bg-white/90"
         >
           Dismiss
         </button>
       </div>
 
       {data.length === 0 ? (
-        <p className="rounded-xl border border-stone-200 bg-white px-4 py-6 text-center text-sm text-stone-500">
+        <p className="rounded-xl border border-stone-200/90 bg-white/85 px-4 py-6 text-center text-sm text-stone-500 backdrop-blur-sm">
           No campsites found matching your criteria.
         </p>
       ) : (
-        <ol className="space-y-4">
+        <ol className="list-none space-y-4 pl-0">
           {data.map((c, i) => (
-            <li key={c.id}>
-              <div className="mb-1 flex items-center gap-3 px-1">
-                <span className="w-5 text-right text-xs font-semibold text-stone-400">
-                  #{i + 1}
-                </span>
-                <ScoreBar score={c.score ?? 0} />
-                {c.landscape && (
-                  <span className="rounded-full bg-teal-50 px-2 py-0.5 text-xs text-teal-700">
-                    {c.landscape}
+            <li key={c.id} className="list-none">
+              <div className="overflow-hidden rounded-2xl border border-stone-200/90 bg-white/85 shadow-sm backdrop-blur-sm">
+                <div className="flex flex-wrap items-center gap-3 border-b border-stone-100 px-4 py-3">
+                  <span className="w-5 shrink-0 text-right text-xs font-semibold text-stone-500">
+                    #{i + 1}
                   </span>
-                )}
+                  <ScoreBar score={c.score ?? 0} />
+                  {c.landscape && (
+                    <span className="rounded-full bg-teal-50 px-2 py-0.5 text-xs text-teal-700">
+                      {c.landscape}
+                    </span>
+                  )}
+                </div>
+                <CampsiteCard
+                  as="div"
+                  className="rounded-none border-0 shadow-none"
+                  campsite={c}
+                  tripDate={tripDate}
+                />
               </div>
-              <CampsiteCard campsite={c} tripDate={tripDate} />
             </li>
           ))}
         </ol>

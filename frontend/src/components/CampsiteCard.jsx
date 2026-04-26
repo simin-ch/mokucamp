@@ -13,11 +13,14 @@ function labelTone(label) {
   return 'bg-stone-200 text-stone-800'
 }
 
-export default function CampsiteCard({ campsite: c, tripDate }) {
+export default function CampsiteCard({ campsite: c, tripDate, as: Root = 'li', className = '' }) {
   const summary = c.weather === null ? null : summarizeForecast(c.weather)
   const dateLine = formatTripDateLabel(tripDate)
+  const rootClass = `overflow-hidden rounded-xl border border-stone-200/90 bg-white/85 shadow-sm backdrop-blur-sm${
+    className ? ` ${className}` : ''
+  }`
   return (
-    <li className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
+    <Root className={rootClass}>
       {/* Header */}
       <div className="border-b border-stone-100 px-4 py-3 sm:flex sm:items-start sm:justify-between sm:gap-4">
         <div>
@@ -123,6 +126,6 @@ export default function CampsiteCard({ campsite: c, tripDate }) {
           </a>
         </div>
       )}
-    </li>
+    </Root>
   )
 }
