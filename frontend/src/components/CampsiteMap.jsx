@@ -24,6 +24,28 @@ const greenIcon = new L.Icon({
   className: 'campsite-marker-green',
 })
 
+function makeShortlistIcon() {
+  return L.divIcon({
+    className: '',
+    html: `<div style="
+      background:#7c3aed;
+      color:#fff;
+      width:30px;height:30px;
+      border-radius:50%;
+      display:flex;align-items:center;justify-content:center;
+      border:2px solid #fff;
+      box-shadow:0 2px 6px rgba(0,0,0,.35);
+    ">
+      <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor' width='14' height='14'>
+        <path d='M6 2a2 2 0 0 0-2 2v18l8-4 8 4V4a2 2 0 0 0-2-2H6Z'/>
+      </svg>
+    </div>`,
+    iconSize: [30, 30],
+    iconAnchor: [15, 15],
+    popupAnchor: [0, -18],
+  })
+}
+
 function makeTopPickIcon(rank) {
   return L.divIcon({
     className: '',
@@ -144,12 +166,16 @@ function MapResizeSync() {
 const NZ_CENTER = [-41.2, 173.2]
 const NZ_ZOOM = 5
 
-export default function CampsiteMap({ mapResult, recommendResult, selectedPlace, radiusKm }) {
+export default function CampsiteMap({ mapResult, recommendResult, selectedPlace, radiusKm, shortlistItems = [] }) {
   const campsites = mapResult?.data ?? []
   const topPicks = recommendResult?.landscapeNotFound ? [] : (recommendResult?.data ?? [])
   const topPickIds = new Set(topPicks.map((c) => c.id))
+  const shortlistIds = new Set(shortlistItems.map((c) => c.id))
 
-  const regularCampsites = campsites.filter((c) => !topPickIds.has(c.id))
+  const regularCampsites = campsites.filter((c) => !topPickIds.has(c.id) && !shortlistIds.has(c.id))
+
+  // Shortlist items that are not already shown as top picks
+  const shortlistMarkers = shortlistItems.filter((c) => !topPickIds.has(c.id))
 
   const radiusM = selectedPlace && Number(radiusKm) > 0 ? Number(radiusKm) * 1000 : null
 
@@ -195,6 +221,14 @@ export default function CampsiteMap({ mapResult, recommendResult, selectedPlace,
           <Marker key={`top-${c.id}`} position={[c.lat, c.lon]} icon={makeTopPickIcon(i + 1)}>
             <Popup>
               <PopupContent c={c} rank={i + 1} />
+            </Popup>
+          </Marker>
+        ))}
+
+        {shortlistMarkers.map((c) => (
+          <Marker key={`sl-${c.id}`} position={[c.lat, c.lon]} icon={makeShortlistIcon()}>
+            <Popup>
+              <PopupContent c={c} />
             </Popup>
           </Marker>
         ))}

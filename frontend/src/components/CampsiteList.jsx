@@ -10,6 +10,8 @@ export default function CampsiteList({
   onPrev,
   onNext,
   tripDate,
+  onToggleShortlist,
+  isShortlisted,
 }) {
   if (error) {
     return (
@@ -81,7 +83,13 @@ export default function CampsiteList({
       ) : (
         <ul className="space-y-4">
           {result.data.map((c) => (
-            <CampsiteCard key={c.id} campsite={c} tripDate={tripDate} />
+            <CampsiteCard
+              key={c.id}
+              campsite={c}
+              tripDate={tripDate}
+              onToggleShortlist={onToggleShortlist}
+              isShortlisted={isShortlisted?.(c.id)}
+            />
           ))}
         </ul>
       )}

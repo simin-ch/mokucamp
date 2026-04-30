@@ -14,7 +14,7 @@ function ScoreBar({ score }) {
   )
 }
 
-export default function RecommendList({ result, error, loading, tripDate, onClear }) {
+export default function RecommendList({ result, error, loading, tripDate, onClear, onToggleShortlist, isShortlisted }) {
   if (loading) {
     return (
       <div className="mb-8 rounded-2xl border border-amber-200 bg-amber-50 p-5">
@@ -99,6 +99,8 @@ export default function RecommendList({ result, error, loading, tripDate, onClea
                   className="rounded-none border-0 shadow-none"
                   campsite={c}
                   tripDate={tripDate}
+                  onToggleShortlist={onToggleShortlist}
+                  isShortlisted={isShortlisted?.(c.id)}
                 />
               </div>
             </li>
