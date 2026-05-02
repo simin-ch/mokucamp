@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import './App.css'
-import CampsiteList from './components/CampsiteList'
 import CampsiteMap from './components/CampsiteMap'
 import RecommendList from './components/RecommendList'
 import SearchForm from './components/SearchForm'
@@ -10,7 +9,7 @@ import { useGeocode } from './hooks/useGeocode'
 import { useMinWidthSm } from './hooks/useMinWidthSm'
 import { useRecommend } from './hooks/useRecommend'
 import { useShortlist } from './hooks/useShortlist'
-import { defaultTripDate, initialForm, PAGE_SIZE } from './utils/queryString'
+import { defaultTripDate, initialForm } from './utils/queryString'
 
 export default function App() {
   const isMinWidthSm = useMinWidthSm()
@@ -19,20 +18,14 @@ export default function App() {
     useCampsites()
   const recommend = useRecommend()
   const shortlist = useShortlist()
-  const [listOpen, setListOpen] = useState(true)
   const [mapOpen, setMapOpen] = useState(false)
   const [shortlistOpen, setShortlistOpen] = useState(false)
-
-  const offset = Number(form.offset) || 0
-  const total = result?.total ?? 0
-  const canPrev = offset > 0
-  const canNext = offset + PAGE_SIZE < total
 
   const showMap = Boolean(mapResult || recommend.result)
   /** Avoid mounting Leaflet inside `display: none` (default collapsed on small screens). */
   const mapShouldMount = showMap && (isMinWidthSm || mapOpen)
   const hasSecondaryContent = Boolean(
-    showMap || result || error || recommend.result || recommend.error,
+    showMap || loading || error || recommend.result || recommend.error,
   )
   const searchShellClass = hasSecondaryContent
     ? 'mx-auto max-w-3xl px-6 py-8'
@@ -53,13 +46,6 @@ export default function App() {
     setMapResult(null)
     recommend.clearResult()
     geocode.clearLocation()
-  }
-
-  function pageDelta(delta) {
-    const newOffset = Math.max(0, offset + delta)
-    const next = { ...form, offset: String(newOffset) }
-    setForm(next)
-    fetchCampsites(next, geocode.selectedPlace)
   }
 
   const shortlistProps = {
@@ -128,6 +114,8 @@ export default function App() {
                   selectedPlace={geocode.selectedPlace}
                   radiusKm={form.radiusKm}
                   shortlistItems={shortlist.items}
+                  tripDate={form.date}
+                  {...shortlistProps}
                 />
               )}
             </div>
@@ -148,39 +136,6 @@ export default function App() {
           </div>
         )}
 
-        {/* Campsite list — collapsible, centred */}
-        {(result || loading || error) && (
-          <div className="mx-auto max-w-3xl px-6 pb-12">
-            <button
-              type="button"
-              onClick={() => setListOpen((v) => !v)}
-              className="mb-4 flex w-full items-center justify-between rounded-xl border border-stone-200/90 bg-white/85 px-4 py-2.5 text-sm font-medium text-stone-700 shadow-sm backdrop-blur-sm hover:bg-white/92"
-            >
-              <span>
-                {result
-                  ? `All results · ${total} campsite${total !== 1 ? 's' : ''}`
-                  : loading
-                  ? 'Loading…'
-                  : 'Results'}
-              </span>
-              <span className="text-stone-400">{listOpen ? '▲' : '▼'}</span>
-            </button>
-            {listOpen && (
-              <CampsiteList
-                result={result}
-                error={error}
-                loading={loading}
-                offset={offset}
-                canPrev={canPrev}
-                canNext={canNext}
-                onPrev={() => pageDelta(-PAGE_SIZE)}
-                onNext={() => pageDelta(PAGE_SIZE)}
-                tripDate={form.date}
-                {...shortlistProps}
-              />
-            )}
-          </div>
-        )}
       </main>
 
       <ShortlistDrawer

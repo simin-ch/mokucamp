@@ -3,6 +3,7 @@ import L from 'leaflet'
 import { useEffect, useRef } from 'react'
 import { Circle, MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet'
 import MarkerClusterGroup from 'react-leaflet-cluster'
+import { formatTripDateLabel } from '../utils/formatTripDate'
 import { summarizeForecast } from '../utils/weatherSummary'
 
 // Fix default Leaflet icon path broken by bundlers
@@ -66,68 +67,145 @@ function makeTopPickIcon(rank) {
   })
 }
 
-function weatherBadge(weather) {
-  if (!weather) return ''
-  const s = summarizeForecast(weather)
-  if (!s) return ''
-  const color = s.label === 'Good' ? '#10b981' : s.label === 'Fair' ? '#f59e0b' : '#ef4444'
-  return `<span style="display:inline-block;padding:1px 8px;border-radius:9999px;font-size:11px;font-weight:600;color:#fff;background:${color};margin-left:4px">${s.label} · ${s.maxTempC}°C</span>`
+function boolLabel(v) {
+  if (v === true) return 'Yes'
+  if (v === false) return 'No'
+  return '—'
 }
 
-function PopupContent({ c, rank }) {
-  const summary = c.weather ? summarizeForecast(c.weather) : null
-  const labelColor =
-    summary?.label === 'Good'
-      ? 'bg-emerald-100 text-emerald-800'
-      : summary?.label === 'Fair'
-      ? 'bg-amber-100 text-amber-800'
-      : summary
-      ? 'bg-red-100 text-red-800'
-      : 'bg-stone-100 text-stone-600'
+function labelTone(label) {
+  if (label === 'Good') return 'bg-emerald-100 text-emerald-900'
+  if (label === 'Fair') return 'bg-amber-100 text-amber-900'
+  return 'bg-stone-200 text-stone-800'
+}
+
+function BookmarkIcon({ filled }) {
+  return filled ? (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+      <path d="M6 2a2 2 0 0 0-2 2v18l8-4 8 4V4a2 2 0 0 0-2-2H6Z" />
+    </svg>
+  ) : (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+      <path d="M6 2a2 2 0 0 0-2 2v18l8-4 8 4V4a2 2 0 0 0-2-2H6Z" />
+    </svg>
+  )
+}
+
+function PopupContent({ c, rank, tripDate, onToggleShortlist, isShortlisted }) {
+  const summary = c.weather === null ? null : summarizeForecast(c.weather)
+  const dateLine = formatTripDateLabel(tripDate)
 
   return (
-    <div className="min-w-[200px] max-w-[260px] text-sm">
+    <div className="text-sm" style={{ minWidth: 280, maxWidth: 320 }}>
       {rank != null && (
         <p className="mb-1 text-xs font-semibold text-amber-600">★ Top Pick #{rank}</p>
       )}
-      <p className="font-semibold text-stone-900 leading-tight">{c.name}</p>
-      {(c.place || c.region) && (
-        <p className="mt-0.5 text-xs text-stone-500">
-          {[c.place, c.region].filter(Boolean).join(' · ')}
-        </p>
-      )}
+
+      {/* Header: name + shortlist button */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold text-stone-900 leading-tight">{c.name}</p>
+          {(c.place || c.region) && (
+            <p className="mt-0.5 text-xs text-stone-500">
+              {[c.place, c.region].filter(Boolean).join(' · ')}
+            </p>
+          )}
+        </div>
+        {onToggleShortlist && (
+          <button
+            type="button"
+            onClick={() => onToggleShortlist(c)}
+            title={isShortlisted ? 'Remove from shortlist' : 'Add to shortlist'}
+            className={`shrink-0 rounded-lg border p-1.5 transition-colors ${
+              isShortlisted
+                ? 'border-violet-200 bg-violet-50 text-violet-600 hover:bg-violet-100'
+                : 'border-stone-200 bg-white/60 text-stone-400 hover:border-stone-300 hover:text-stone-600'
+            }`}
+          >
+            <BookmarkIcon filled={isShortlisted} />
+          </button>
+        )}
+      </div>
+
+      {/* Tags */}
       <div className="mt-2 flex flex-wrap gap-1.5">
         {c.distanceKm != null && (
           <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs text-sky-800">
-            {c.distanceKm < 1
-              ? `${Math.round(c.distanceKm * 1000)} m`
-              : `${c.distanceKm} km`}
+            {c.distanceKm < 1 ? `${Math.round(c.distanceKm * 1000)} m` : `${c.distanceKm} km`}
           </span>
         )}
-        {c.landscape &&
-          c.landscape.split(',').map((l) => (
-            <span
-              key={l}
-              className="rounded-full bg-teal-50 px-2 py-0.5 text-xs text-teal-700"
-            >
-              {l.trim()}
-            </span>
-          ))}
-        {summary && (
-          <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${labelColor}`}>
-            {summary.label} · {summary.maxTempC}°C
+        {c.campsiteCategory && (
+          <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-700">
+            {c.campsiteCategory}
+          </span>
+        )}
+        {c.landscape && c.landscape.split(',').map((l) => (
+          <span key={l} className="rounded-full bg-teal-50 px-2 py-0.5 text-xs text-teal-700">
+            {l.trim()}
+          </span>
+        ))}
+        {c.bookable && (
+          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-800">
+            Bookable
           </span>
         )}
       </div>
+
+      {/* Weather */}
+      {c.weather !== undefined && (
+        <div className="mt-2 border-t border-stone-100 pt-2">
+          <p className="text-xs font-medium uppercase tracking-wide text-sky-900/80">
+            {dateLine ? `Forecast · ${dateLine}` : 'Forecast'}
+          </p>
+          {c.weather === null || !summary ? (
+            <p className="mt-1 text-xs text-stone-500">Weather unavailable</p>
+          ) : (
+            <div className="mt-1.5 flex flex-wrap items-start gap-2">
+              <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-xs text-stone-700">
+                <dt className="text-stone-500">Max temp</dt>
+                <dd className="tabular-nums">{summary.maxTempC} °C</dd>
+                <dt className="text-stone-500">Rain</dt>
+                <dd className="tabular-nums">{summary.rainMm} mm</dd>
+                <dt className="text-stone-500">Max wind</dt>
+                <dd className="tabular-nums">{summary.maxWindKmh} km/h</dd>
+              </dl>
+              <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${labelTone(summary.label)}`}>
+                {summary.label}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Facilities */}
+      <div className="mt-2 border-t border-stone-100 pt-2">
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs text-stone-600">
+          <div className="flex gap-1.5"><dt className="text-stone-500">Dogs</dt><dd>{boolLabel(c.dogsAllowedBool)}</dd></div>
+          <div className="flex gap-1.5"><dt className="text-stone-500">Toilets</dt><dd>{boolLabel(c.hasToilets)}</dd></div>
+          <div className="flex gap-1.5"><dt className="text-stone-500">Water</dt><dd>{boolLabel(c.hasWater)}</dd></div>
+          <div className="flex gap-1.5"><dt className="text-stone-500">Power</dt><dd>{boolLabel(c.hasPower)}</dd></div>
+        </dl>
+      </div>
+
+      {/* Introduction */}
+      {c.introduction && (
+        <p className="mt-2 border-t border-stone-100 pt-2 text-xs leading-relaxed text-stone-600 line-clamp-3">
+          {c.introduction}
+        </p>
+      )}
+
+      {/* Official link */}
       {c.staticLink && (
-        <a
-          href={c.staticLink}
-          target="_blank"
-          rel="noreferrer"
-          className="mt-2 block text-xs font-medium text-emerald-700 hover:underline"
-        >
-          Open official page →
-        </a>
+        <div className="mt-2 border-t border-stone-100 pt-2">
+          <a
+            href={c.staticLink}
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs font-medium text-emerald-700 hover:underline"
+          >
+            Open official page →
+          </a>
+        </div>
       )}
     </div>
   )
@@ -166,7 +244,7 @@ function MapResizeSync() {
 const NZ_CENTER = [-41.2, 173.2]
 const NZ_ZOOM = 5
 
-export default function CampsiteMap({ mapResult, recommendResult, selectedPlace, radiusKm, shortlistItems = [] }) {
+export default function CampsiteMap({ mapResult, recommendResult, selectedPlace, radiusKm, shortlistItems = [], tripDate, onToggleShortlist, isShortlisted }) {
   const campsites = mapResult?.data ?? []
   const topPicks = recommendResult?.landscapeNotFound ? [] : (recommendResult?.data ?? [])
   const topPickIds = new Set(topPicks.map((c) => c.id))
@@ -178,6 +256,8 @@ export default function CampsiteMap({ mapResult, recommendResult, selectedPlace,
   const shortlistMarkers = shortlistItems.filter((c) => !topPickIds.has(c.id))
 
   const radiusM = selectedPlace && Number(radiusKm) > 0 ? Number(radiusKm) * 1000 : null
+
+  const popupProps = { tripDate, onToggleShortlist }
 
   return (
     <div className="h-[60vh] w-full overflow-hidden rounded-2xl border border-stone-200 shadow-sm">
@@ -210,8 +290,8 @@ export default function CampsiteMap({ mapResult, recommendResult, selectedPlace,
         >
           {regularCampsites.map((c) => (
             <Marker key={c.id} position={[c.lat, c.lon]} icon={greenIcon}>
-              <Popup>
-                <PopupContent c={c} />
+              <Popup maxWidth={340}>
+                <PopupContent c={c} isShortlisted={isShortlisted?.(c.id)} {...popupProps} />
               </Popup>
             </Marker>
           ))}
@@ -219,16 +299,16 @@ export default function CampsiteMap({ mapResult, recommendResult, selectedPlace,
 
         {topPicks.map((c, i) => (
           <Marker key={`top-${c.id}`} position={[c.lat, c.lon]} icon={makeTopPickIcon(i + 1)}>
-            <Popup>
-              <PopupContent c={c} rank={i + 1} />
+            <Popup maxWidth={340}>
+              <PopupContent c={c} rank={i + 1} isShortlisted={isShortlisted?.(c.id)} {...popupProps} />
             </Popup>
           </Marker>
         ))}
 
         {shortlistMarkers.map((c) => (
           <Marker key={`sl-${c.id}`} position={[c.lat, c.lon]} icon={makeShortlistIcon()}>
-            <Popup>
-              <PopupContent c={c} />
+            <Popup maxWidth={340}>
+              <PopupContent c={c} isShortlisted={isShortlisted?.(c.id)} {...popupProps} />
             </Popup>
           </Marker>
         ))}
