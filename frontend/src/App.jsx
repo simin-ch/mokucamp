@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import './App.css'
 import CampsiteMap from './components/CampsiteMap'
-import RecommendList from './components/RecommendList'
 import SearchForm from './components/SearchForm'
 import ShortlistDrawer from './components/ShortlistDrawer'
 import { useCampsites } from './hooks/useCampsites'
@@ -24,9 +23,7 @@ export default function App() {
   const showMap = Boolean(mapResult || recommend.result)
   /** Avoid mounting Leaflet inside `display: none` (default collapsed on small screens). */
   const mapShouldMount = showMap && (isMinWidthSm || mapOpen)
-  const hasSecondaryContent = Boolean(
-    showMap || loading || error || recommend.result || recommend.error,
-  )
+  const hasSecondaryContent = Boolean(showMap || loading || error)
   const searchShellClass = hasSecondaryContent
     ? 'mx-auto max-w-3xl px-6 py-8'
     : 'flex min-h-[calc(100dvh-4.5rem)] flex-col items-center justify-center px-6 py-8'
@@ -119,20 +116,6 @@ export default function App() {
                 />
               )}
             </div>
-          </div>
-        )}
-
-        {/* Top Picks list — below the map */}
-        {(recommend.result || recommend.error || recommend.loading) && (
-          <div className="mx-auto max-w-3xl px-6 pb-2">
-            <RecommendList
-              result={recommend.result}
-              error={recommend.error}
-              loading={recommend.loading}
-              tripDate={form.date}
-              onClear={recommend.clearResult}
-              {...shortlistProps}
-            />
           </div>
         )}
 
