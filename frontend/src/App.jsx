@@ -6,6 +6,7 @@ import EmailVerifyPage from './components/EmailVerifyPage'
 import LoginModal from './components/LoginModal'
 import SearchForm from './components/SearchForm'
 import ShortlistDrawer from './components/ShortlistDrawer'
+import ShortlistDropdown from './components/ShortlistDropdown'
 import { AuthProvider, useAuth } from './hooks/useAuth'
 import { useCampsites } from './hooks/useCampsites'
 import { useGeocode } from './hooks/useGeocode'
@@ -134,22 +135,32 @@ function AppInner() {
               </button>
             )}
 
-            {/* Shortlist button */}
-            <button
-              type="button"
-              onClick={() => setShortlistOpen(true)}
-              className="flex items-center gap-2 rounded-lg border border-stone-200/90 bg-white/60 px-3 py-1.5 text-sm font-medium text-stone-600 transition-colors hover:bg-white/90 hover:text-stone-800"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={shortlist.items.length > 0 ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`h-4 w-4 ${shortlist.items.length > 0 ? 'text-violet-500' : ''}`}>
-                <path d="M6 2a2 2 0 0 0-2 2v18l8-4 8 4V4a2 2 0 0 0-2-2H6Z" />
-              </svg>
-              <span>Shortlist</span>
-              {shortlist.items.length > 0 && (
-                <span className="rounded-full bg-violet-100 px-1.5 py-0.5 text-xs font-semibold text-violet-700">
-                  {shortlist.items.length}
-                </span>
-              )}
-            </button>
+            {/* Shortlist button + dropdown */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShortlistOpen((v) => !v)}
+                className="flex items-center gap-2 rounded-lg border border-stone-200/90 bg-white/60 px-3 py-1.5 text-sm font-medium text-stone-600 transition-colors hover:bg-white/90 hover:text-stone-800"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={shortlist.items.length > 0 ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`h-4 w-4 ${shortlist.items.length > 0 ? 'text-violet-500' : ''}`}>
+                  <path d="M6 2a2 2 0 0 0-2 2v18l8-4 8 4V4a2 2 0 0 0-2-2H6Z" />
+                </svg>
+                <span>Shortlist</span>
+                {shortlist.items.length > 0 && (
+                  <span className="rounded-full bg-violet-100 px-1.5 py-0.5 text-xs font-semibold text-violet-700">
+                    {shortlist.items.length}
+                  </span>
+                )}
+              </button>
+
+              <ShortlistDropdown
+                open={shortlistOpen}
+                onClose={() => setShortlistOpen(false)}
+                items={shortlist.items}
+                onToggleShortlist={shortlist.toggle}
+                onClear={shortlist.clear}
+              />
+            </div>
           </div>
         </div>
       </header>
@@ -219,14 +230,6 @@ function AppInner() {
           )}
         </div>
       </div>
-
-      <ShortlistDrawer
-        open={shortlistOpen}
-        onClose={() => setShortlistOpen(false)}
-        items={shortlist.items}
-        onClear={shortlist.clear}
-        {...shortlistProps}
-      />
 
       <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} />
       <ChangePasswordModal open={changePwOpen} onClose={() => setChangePwOpen(false)} />
