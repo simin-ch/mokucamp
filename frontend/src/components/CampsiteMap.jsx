@@ -260,7 +260,7 @@ export default function CampsiteMap({ mapResult, recommendResult, selectedPlace,
   const popupProps = { tripDate, onToggleShortlist }
 
   return (
-    <div className="h-[60vh] w-full overflow-hidden rounded-2xl border border-stone-200 shadow-sm">
+    <div className="h-full w-full overflow-hidden">
       <MapContainer
         center={NZ_CENTER}
         zoom={NZ_ZOOM}

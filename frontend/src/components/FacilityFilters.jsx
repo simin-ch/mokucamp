@@ -13,7 +13,7 @@ export default function FacilityFilters({ form, onChange }) {
       <span className="mb-2 block text-xs font-medium uppercase tracking-wide text-stone-500">
         Facilities
       </span>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3">
         {FILTERS.map(({ key, label }) => (
           <label key={key} className="block">
             <span className="mb-1 block text-xs text-stone-500">{label}</span>
