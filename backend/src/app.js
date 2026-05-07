@@ -1,6 +1,8 @@
 const express = require('express')
 const cors = require('cors')
 
+const authRouter = require('./routes/auth')
+const shortlistRouter = require('./routes/shortlist')
 const campsitesRouter = require('./routes/campsites')
 const geocodeRouter = require('./routes/geocode')
 const recommendRouter = require('./routes/recommend')
@@ -15,6 +17,8 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok' })
 })
 
+app.use('/api/auth', authRouter)
+app.use('/api/shortlist', shortlistRouter)
 app.use('/api/campsites', campsitesRouter)
 app.use('/api/geocode', geocodeRouter)
 app.use('/api/recommend', recommendRouter)
