@@ -7,6 +7,36 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id                     Int      @id @default(autoincrement())
+  email                  String   @unique
+  passwordHash           String
+  emailVerified          Boolean  @default(false)
+  verificationToken      String?  @unique
+  verificationTokenExpiry DateTime?
+  resetToken             String?  @unique
+  resetTokenExpiry       DateTime?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  shortlistItems         ShortlistItem[]
+
+  @@index([email])
+}
+
+model ShortlistItem {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  campsiteId Int
+  createdAt  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campsite   Campsite @relation(fields: [campsiteId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, campsiteId])
+  @@index([userId])
+}
+
 model Campsite {
   id                     Int      @id @default(autoincrement())
 
@@ -54,6 +84,8 @@ model Campsite {
 
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
+
+  shortlistItems         ShortlistItem[]
 
   @@unique([dataset, sourceId])
   @@index([dataset])
