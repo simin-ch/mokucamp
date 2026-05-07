@@ -67,11 +67,6 @@ function makeTopPickIcon(rank) {
   })
 }
 
-function boolLabel(v) {
-  if (v === true) return 'Yes'
-  if (v === false) return 'No'
-  return '—'
-}
 
 function labelTone(label) {
   if (label === 'Good') return 'bg-emerald-100 text-emerald-900'
@@ -95,10 +90,25 @@ function PopupContent({ c, rank, tripDate, onToggleShortlist, isShortlisted }) {
   const summary = c.weather === null ? null : summarizeForecast(c.weather)
   const dateLine = formatTripDateLabel(tripDate)
 
+  const thumbnailUrl = c.thumbnailUrl || null
+
   return (
     <div className="text-sm" style={{ minWidth: 280, maxWidth: 320 }}>
       {rank != null && (
         <p className="mb-1 text-xs font-semibold text-amber-600">★ Top Pick #{rank}</p>
+      )}
+
+      {/* Campsite image */}
+      {thumbnailUrl && (
+        <div className="-mx-[10px] -mt-[10px] mb-2 overflow-hidden rounded-t-lg" style={{ height: 140 }}>
+          <img
+            src={thumbnailUrl}
+            alt={c.name}
+            className="h-full w-full object-cover"
+            loading="lazy"
+            onError={(e) => { e.currentTarget.parentElement.style.display = 'none' }}
+          />
+        </div>
       )}
 
       {/* Header: name + shortlist button */}
@@ -179,12 +189,18 @@ function PopupContent({ c, rank, tripDate, onToggleShortlist, isShortlisted }) {
 
       {/* Facilities */}
       <div className="mt-2 border-t border-stone-100 pt-2">
-        <dl className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs text-stone-600">
-          <div className="flex gap-1.5"><dt className="text-stone-500">Dogs</dt><dd>{boolLabel(c.dogsAllowedBool)}</dd></div>
-          <div className="flex gap-1.5"><dt className="text-stone-500">Toilets</dt><dd>{boolLabel(c.hasToilets)}</dd></div>
-          <div className="flex gap-1.5"><dt className="text-stone-500">Water</dt><dd>{boolLabel(c.hasWater)}</dd></div>
-          <div className="flex gap-1.5"><dt className="text-stone-500">Power</dt><dd>{boolLabel(c.hasPower)}</dd></div>
-        </dl>
+        <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs">
+          {[
+            { label: 'Dogs',    val: c.dogsAllowedBool },
+            { label: 'Toilets', val: c.hasToilets },
+            { label: 'Water',   val: c.hasWater },
+            { label: 'Power',   val: c.hasPower },
+          ].map(({ label, val }) => (
+            <span key={label} className={val ? 'text-emerald-600' : 'text-stone-400'}>
+              {label} {val ? '✓' : '✗'}
+            </span>
+          ))}
+        </div>
       </div>
 
       {/* Introduction */}

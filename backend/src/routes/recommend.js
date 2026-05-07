@@ -3,6 +3,7 @@ const express = require('express')
 const router = express.Router()
 const { PrismaClient } = require('@prisma/client')
 const { fetchWeather } = require('../utils/weather')
+const { withThumbnail } = require('../utils/campsite')
 
 const prisma = new PrismaClient()
 
@@ -202,7 +203,7 @@ router.get('/', async (req, res) => {
       .sort((a, b) => b.score - a.score)
       .slice(0, topN)
 
-    res.json({ data: scored, total: candidates.length, landscapeNotFound })
+    res.json({ data: scored.map(withThumbnail), total: candidates.length, landscapeNotFound })
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error(err)

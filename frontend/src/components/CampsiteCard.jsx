@@ -1,11 +1,6 @@
 import { formatTripDateLabel } from '../utils/formatTripDate'
 import { summarizeForecast } from '../utils/weatherSummary'
 
-function boolLabel(v) {
-  if (v === true) return 'Yes'
-  if (v === false) return 'No'
-  return '—'
-}
 
 function labelTone(label) {
   if (label === 'Good') return 'bg-emerald-100 text-emerald-900'
@@ -28,11 +23,25 @@ function BookmarkIcon({ filled }) {
 export default function CampsiteCard({ campsite: c, tripDate, as: Root = 'li', className = '', onToggleShortlist, isShortlisted = false }) {
   const summary = c.weather === null ? null : summarizeForecast(c.weather)
   const dateLine = formatTripDateLabel(tripDate)
+  const thumbnailUrl = c.thumbnailUrl || null
   const rootClass = `overflow-hidden rounded-xl border border-stone-200/90 bg-white/85 shadow-sm backdrop-blur-sm${
     className ? ` ${className}` : ''
   }`
   return (
     <Root className={rootClass}>
+      {/* Campsite image */}
+      {thumbnailUrl && (
+        <div className="h-36 w-full overflow-hidden">
+          <img
+            src={thumbnailUrl}
+            alt={c.name}
+            className="h-full w-full object-cover"
+            loading="lazy"
+            onError={(e) => { e.currentTarget.parentElement.style.display = 'none' }}
+          />
+        </div>
+      )}
+
       {/* Header */}
       <div className="border-b border-stone-100 px-4 py-3 sm:flex sm:items-start sm:justify-between sm:gap-4">
         <div className="min-w-0 flex-1">
@@ -110,16 +119,18 @@ export default function CampsiteCard({ campsite: c, tripDate, as: Root = 'li', c
 
       {/* Details grid */}
       <div className="grid gap-3 px-4 py-3 text-sm sm:grid-cols-2">
-        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-stone-600">
-          <dt className="text-stone-500">Dogs</dt>
-          <dd>{boolLabel(c.dogsAllowedBool)}</dd>
-          <dt className="text-stone-500">Toilets</dt>
-          <dd>{boolLabel(c.hasToilets)}</dd>
-          <dt className="text-stone-500">Water</dt>
-          <dd>{boolLabel(c.hasWater)}</dd>
-          <dt className="text-stone-500">Power</dt>
-          <dd>{boolLabel(c.hasPower)}</dd>
-        </dl>
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+          {[
+            { label: 'Dogs',    val: c.dogsAllowedBool },
+            { label: 'Toilets', val: c.hasToilets },
+            { label: 'Water',   val: c.hasWater },
+            { label: 'Power',   val: c.hasPower },
+          ].map(({ label, val }) => (
+            <span key={label} className={val ? 'text-emerald-600' : 'text-stone-400'}>
+              {label} {val ? '✓' : '✗'}
+            </span>
+          ))}
+        </div>
         <div className="text-stone-600">
           <p className="text-xs uppercase tracking-wide text-stone-500">Coordinates</p>
           <p className="mt-1 font-mono text-xs tabular-nums">

@@ -3,11 +3,13 @@ const express = require('express')
 const router = express.Router()
 const { PrismaClient } = require('@prisma/client')
 const { fetchWeather } = require('../utils/weather')
+const { withThumbnail } = require('../utils/campsite')
 
 const prisma = new PrismaClient()
 
 const MAX_LIMIT = 500
 const DEFAULT_LIMIT = 312
+
 
 /**
  * Haversine great-circle distance between two WGS84 coordinates, in kilometres.
@@ -160,7 +162,8 @@ router.get('/', async (req, res) => {
       }
 
       const page = filtered.slice(skip, skip + take)
-      const data = wantWeather ? await attachWeather(page, tripDate) : page
+      const weathered = wantWeather ? await attachWeather(page, tripDate) : page
+      const data = weathered.map(withThumbnail)
 
       return res.json({
         data,
@@ -184,7 +187,8 @@ router.get('/', async (req, res) => {
       landscapeNotFound = true
     }
 
-    const data = wantWeather ? await attachWeather(rows, tripDate) : rows
+    const weathered = wantWeather ? await attachWeather(rows, tripDate) : rows
+    const data = weathered.map(withThumbnail)
 
     res.json({ data, total, landscapeNotFound })
   } catch (err) {
