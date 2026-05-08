@@ -1,6 +1,7 @@
 const express = require('express')
 const { PrismaClient } = require('@prisma/client')
 const authenticate = require('../middleware/authenticate')
+const { withThumbnail } = require('../utils/campsite')
 
 const router = express.Router()
 const prisma = new PrismaClient()
@@ -12,7 +13,7 @@ async function getUserShortlist(userId) {
     include: { campsite: true },
     orderBy: { createdAt: 'desc' },
   })
-  return rows.map((r) => r.campsite)
+  return rows.map((r) => withThumbnail(r.campsite))
 }
 
 // ---------------------------------------------------------------------------
