@@ -1,10 +1,9 @@
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Circle, MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet'
+import CampsiteDetailDrawer from './CampsiteDetailDrawer'
 import MarkerClusterGroup from 'react-leaflet-cluster'
-import { formatTripDateLabel } from '../utils/formatTripDate'
-import { summarizeForecast } from '../utils/weatherSummary'
 
 // Fix default Leaflet icon path broken by bundlers
 delete L.Icon.Default.prototype._getIconUrl
@@ -68,12 +67,6 @@ function makeTopPickIcon(rank) {
 }
 
 
-function labelTone(label) {
-  if (label === 'Good') return 'bg-emerald-100 text-emerald-900'
-  if (label === 'Fair') return 'bg-amber-100 text-amber-900'
-  return 'bg-stone-200 text-stone-800'
-}
-
 function BookmarkIcon({ filled }) {
   return filled ? (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
@@ -86,10 +79,7 @@ function BookmarkIcon({ filled }) {
   )
 }
 
-function PopupContent({ c, rank, tripDate, onToggleShortlist, isShortlisted }) {
-  const summary = c.weather === null ? null : summarizeForecast(c.weather)
-  const dateLine = formatTripDateLabel(tripDate)
-
+function PopupContent({ c, rank, onToggleShortlist, isShortlisted, onOpenDetail }) {
   const thumbnailUrl = c.thumbnailUrl || null
 
   return (
@@ -161,32 +151,6 @@ function PopupContent({ c, rank, tripDate, onToggleShortlist, isShortlisted }) {
         )}
       </div>
 
-      {/* Weather */}
-      {c.weather !== undefined && (
-        <div className="mt-2 border-t border-stone-100 pt-2">
-          <p className="text-xs font-medium uppercase tracking-wide text-sky-900/80">
-            {dateLine ? `Forecast · ${dateLine}` : 'Forecast'}
-          </p>
-          {c.weather === null || !summary ? (
-            <p className="mt-1 text-xs text-stone-500">Weather unavailable</p>
-          ) : (
-            <div className="mt-1.5 flex flex-wrap items-start gap-2">
-              <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-xs text-stone-700">
-                <dt className="text-stone-500">Max temp</dt>
-                <dd className="tabular-nums">{summary.maxTempC} °C</dd>
-                <dt className="text-stone-500">Rain</dt>
-                <dd className="tabular-nums">{summary.rainMm} mm</dd>
-                <dt className="text-stone-500">Max wind</dt>
-                <dd className="tabular-nums">{summary.maxWindKmh} km/h</dd>
-              </dl>
-              <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${labelTone(summary.label)}`}>
-                {summary.label}
-              </span>
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Facilities */}
       <div className="mt-2 border-t border-stone-100 pt-2">
         <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs">
@@ -221,6 +185,19 @@ function PopupContent({ c, rank, tripDate, onToggleShortlist, isShortlisted }) {
           >
             Open official page →
           </a>
+        </div>
+      )}
+
+      {/* View details button */}
+      {onOpenDetail && (
+        <div className="mt-2 border-t border-stone-100 pt-2">
+          <button
+            type="button"
+            onClick={() => onOpenDetail(c)}
+            className="w-full rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-700"
+          >
+            View details →
+          </button>
         </div>
       )}
     </div>
@@ -261,6 +238,8 @@ const NZ_CENTER = [-41.2, 173.2]
 const NZ_ZOOM = 5
 
 export default function CampsiteMap({ mapResult, recommendResult, selectedPlace, radiusKm, shortlistItems = [], tripDate, onToggleShortlist, isShortlisted }) {
+  const [detailCampsite, setDetailCampsite] = useState(null)
+
   const campsites = mapResult?.data ?? []
   const topPicks = recommendResult?.landscapeNotFound ? [] : (recommendResult?.data ?? [])
   const topPickIds = new Set(topPicks.map((c) => c.id))
@@ -273,10 +252,10 @@ export default function CampsiteMap({ mapResult, recommendResult, selectedPlace,
 
   const radiusM = selectedPlace && Number(radiusKm) > 0 ? Number(radiusKm) * 1000 : null
 
-  const popupProps = { tripDate, onToggleShortlist }
+  const popupProps = { onToggleShortlist, onOpenDetail: setDetailCampsite }
 
   return (
-    <div className="h-full w-full overflow-hidden">
+    <div className="relative h-full w-full overflow-hidden">
       <MapContainer
         center={NZ_CENTER}
         zoom={NZ_ZOOM}
@@ -329,6 +308,14 @@ export default function CampsiteMap({ mapResult, recommendResult, selectedPlace,
           </Marker>
         ))}
       </MapContainer>
+
+      <CampsiteDetailDrawer
+        campsite={detailCampsite}
+        tripDate={tripDate}
+        onClose={() => setDetailCampsite(null)}
+        onToggleShortlist={onToggleShortlist}
+        isShortlisted={isShortlisted}
+      />
     </div>
   )
 }
