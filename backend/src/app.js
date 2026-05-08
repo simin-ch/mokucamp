@@ -7,6 +7,7 @@ const campsitesRouter = require('./routes/campsites')
 const geocodeRouter = require('./routes/geocode')
 const recommendRouter = require('./routes/recommend')
 const weatherRouter = require('./routes/weather')
+const reviewsRouter = require('./routes/reviews')
 
 const app = express()
 
@@ -23,6 +24,7 @@ app.use('/api/campsites', campsitesRouter)
 app.use('/api/geocode', geocodeRouter)
 app.use('/api/recommend', recommendRouter)
 app.use('/api/weather', weatherRouter)
+app.use('/api/reviews', reviewsRouter)
 
 module.exports = app
 

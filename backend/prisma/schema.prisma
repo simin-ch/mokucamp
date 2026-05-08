@@ -20,6 +20,7 @@ model User {
   updatedAt              DateTime @updatedAt
 
   shortlistItems         ShortlistItem[]
+  reviews                Review[]
 
   @@index([email])
 }
@@ -86,6 +87,7 @@ model Campsite {
   updatedAt              DateTime @updatedAt
 
   shortlistItems         ShortlistItem[]
+  reviews                Review[]
 
   @@unique([dataset, sourceId])
   @@index([dataset])
@@ -94,4 +96,20 @@ model Campsite {
   @@index([campsiteCategory])
   @@index([access])
   @@index([lat, lon])
+}
+
+model Review {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  campsiteId Int
+  rating     Int
+  content    String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campsite Campsite @relation(fields: [campsiteId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, campsiteId])
+  @@index([campsiteId])
 }
