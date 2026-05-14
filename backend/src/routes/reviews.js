@@ -8,6 +8,29 @@ const prisma = new PrismaClient()
 const PAGE_SIZE = 10
 
 // ---------------------------------------------------------------------------
+// GET /api/reviews/mine
+// Auth required. Returns all reviews written by the current user,
+// including basic campsite info (id, name, lat, lon).
+// ---------------------------------------------------------------------------
+router.get('/mine', authenticate, async (req, res) => {
+  try {
+    const reviews = await prisma.review.findMany({
+      where: { userId: req.user.id },
+      include: {
+        campsite: {
+          select: { id: true, name: true, lat: true, lon: true, region: true, place: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    })
+    return res.json({ reviews })
+  } catch (err) {
+    console.error(err)
+    return res.status(500).json({ error: 'Failed to fetch reviews.' })
+  }
+})
+
+// ---------------------------------------------------------------------------
 // GET /api/reviews/:campsiteId?page=1
 // Public. Returns paginated reviews + aggregate stats.
 // ---------------------------------------------------------------------------
