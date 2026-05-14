@@ -5,6 +5,13 @@ const jwt = require('jsonwebtoken')
 const { PrismaClient } = require('@prisma/client')
 const { sendVerificationEmail, sendPasswordResetEmail } = require('../services/email')
 const authenticate = require('../middleware/authenticate')
+const {
+  forgotPasswordLimiter,
+  resendVerificationLimiter,
+  resetPasswordLimiter,
+  loginLimiter,
+  registerLimiter,
+} = require('../middleware/authRateLimit')
 
 const router = express.Router()
 const prisma = new PrismaClient()
@@ -32,7 +39,7 @@ function signJwt(user) {
 // ---------------------------------------------------------------------------
 // POST /api/auth/register
 // ---------------------------------------------------------------------------
-router.post('/register', async (req, res) => {
+router.post('/register', registerLimiter, async (req, res) => {
   const { email, password } = req.body
 
   if (!email || !password) {
@@ -77,7 +84,7 @@ router.post('/register', async (req, res) => {
 // ---------------------------------------------------------------------------
 // POST /api/auth/login
 // ---------------------------------------------------------------------------
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
   const { email, password } = req.body
 
   if (!email || !password) {
@@ -149,7 +156,7 @@ router.get('/verify-email', async (req, res) => {
 // ---------------------------------------------------------------------------
 // POST /api/auth/resend-verification
 // ---------------------------------------------------------------------------
-router.post('/resend-verification', async (req, res) => {
+router.post('/resend-verification', resendVerificationLimiter, async (req, res) => {
   const { email } = req.body
   if (!email) return res.status(400).json({ error: 'Email is required.' })
 
@@ -177,7 +184,7 @@ router.post('/resend-verification', async (req, res) => {
 // ---------------------------------------------------------------------------
 // POST /api/auth/forgot-password
 // ---------------------------------------------------------------------------
-router.post('/forgot-password', async (req, res) => {
+router.post('/forgot-password', forgotPasswordLimiter, async (req, res) => {
   const { email } = req.body
   if (!email) return res.status(400).json({ error: 'Email is required.' })
 
@@ -202,7 +209,7 @@ router.post('/forgot-password', async (req, res) => {
 // ---------------------------------------------------------------------------
 // POST /api/auth/reset-password
 // ---------------------------------------------------------------------------
-router.post('/reset-password', async (req, res) => {
+router.post('/reset-password', resetPasswordLimiter, async (req, res) => {
   const { token, password } = req.body
   if (!token || !password) return res.status(400).json({ error: 'Token and new password are required.' })
   if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters.' })
@@ -258,10 +265,39 @@ router.post('/change-password', authenticate, async (req, res) => {
 router.get('/me', authenticate, async (req, res) => {
   const user = await prisma.user.findUnique({
     where: { id: req.user.id },
-    select: { id: true, email: true, emailVerified: true, createdAt: true },
+    select: { id: true, email: true, username: true, emailVerified: true, createdAt: true },
   })
   if (!user) return res.status(404).json({ error: 'User not found.' })
   return res.json({ user })
+})
+
+// ---------------------------------------------------------------------------
+// PATCH /api/auth/profile  (protected)
+// Body: { username?: string }
+// ---------------------------------------------------------------------------
+router.patch('/profile', authenticate, async (req, res) => {
+  const { username } = req.body
+
+  if (username !== undefined) {
+    if (typeof username !== 'string') {
+      return res.status(400).json({ error: 'username must be a string.' })
+    }
+    const trimmed = username.trim()
+    if (trimmed.length < 2 || trimmed.length > 20) {
+      return res.status(400).json({ error: 'Username must be between 2 and 20 characters.' })
+    }
+    if (!/^[\w\u4e00-\u9fa5\- ]+$/.test(trimmed)) {
+      return res.status(400).json({ error: 'Username contains invalid characters.' })
+    }
+  }
+
+  const updated = await prisma.user.update({
+    where: { id: req.user.id },
+    data: { username: username !== undefined ? username.trim() : undefined },
+    select: { id: true, email: true, username: true, emailVerified: true, createdAt: true },
+  })
+
+  return res.json({ user: updated })
 })
 
 module.exports = router
