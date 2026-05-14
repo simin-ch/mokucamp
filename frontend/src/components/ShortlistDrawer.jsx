@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import CampsiteCard from './CampsiteCard'
 
-export default function ShortlistDrawer({ open, onClose, items, onToggleShortlist, isShortlisted, onClear }) {
+export default function ShortlistDrawer({ open, onClose, items, onToggleShortlist, isShortlisted, onClear, onLocate }) {
   // Close on Escape key
   useEffect(() => {
     if (!open) return
@@ -83,12 +83,27 @@ export default function ShortlistDrawer({ open, onClose, items, onToggleShortlis
           ) : (
             <ul className="space-y-4 list-none pl-0">
               {items.map((c) => (
-                <CampsiteCard
-                  key={c.id}
-                  campsite={c}
-                  onToggleShortlist={onToggleShortlist}
-                  isShortlisted={isShortlisted(c.id)}
-                />
+                <div key={c.id}>
+                  {onLocate && (
+                    <button
+                      type="button"
+                      onClick={() => { onLocate(c); onClose() }}
+                      className="mb-1.5 flex w-full items-center gap-1.5 rounded-lg border border-stone-200 bg-white/70 px-3 py-1.5 text-xs font-medium text-stone-600 transition hover:border-emerald-300 hover:text-emerald-700"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21" />
+                        <line x1="9" y1="3" x2="9" y2="18" />
+                        <line x1="15" y1="6" x2="15" y2="21" />
+                      </svg>
+                      View on map
+                    </button>
+                  )}
+                  <CampsiteCard
+                    campsite={c}
+                    onToggleShortlist={onToggleShortlist}
+                    isShortlisted={isShortlisted(c.id)}
+                  />
+                </div>
               ))}
             </ul>
           )}

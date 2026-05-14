@@ -234,11 +234,30 @@ function MapResizeSync() {
   return null
 }
 
+function FlyToCampsite({ campsite, onConsumed }) {
+  const map = useMap()
+  const prevIdRef = useRef(null)
+
+  useEffect(() => {
+    if (!campsite || campsite.id === prevIdRef.current) return
+    prevIdRef.current = campsite.id
+    map.flyTo([campsite.lat, campsite.lon], 14, { duration: 1.2 })
+    onConsumed?.()
+  }, [campsite, map, onConsumed])
+
+  return null
+}
+
 const NZ_CENTER = [-41.2, 173.2]
 const NZ_ZOOM = 5
 
-export default function CampsiteMap({ mapResult, recommendResult, selectedPlace, radiusKm, shortlistItems = [], tripDate, onToggleShortlist, isShortlisted }) {
+export default function CampsiteMap({ mapResult, recommendResult, selectedPlace, radiusKm, shortlistItems = [], tripDate, onToggleShortlist, isShortlisted, focusCampsite, onFocusConsumed }) {
   const [detailCampsite, setDetailCampsite] = useState(null)
+
+  // When a campsite is focused (from profile page), open its detail drawer
+  useEffect(() => {
+    if (focusCampsite) setDetailCampsite(focusCampsite)
+  }, [focusCampsite])
 
   const campsites = mapResult?.data ?? []
   const topPicks = recommendResult?.landscapeNotFound ? [] : (recommendResult?.data ?? [])
@@ -268,6 +287,7 @@ export default function CampsiteMap({ mapResult, recommendResult, selectedPlace,
         />
 
         {selectedPlace && <FlyToLocation place={selectedPlace} />}
+        {focusCampsite && <FlyToCampsite campsite={focusCampsite} onConsumed={onFocusConsumed} />}
 
         <MapResizeSync />
 

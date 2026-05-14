@@ -58,6 +58,10 @@ export function AuthProvider({ children }) {
     setUser(null)
   }, [])
 
+  const updateUser = useCallback((patch) => {
+    setUser((prev) => prev ? { ...prev, ...patch } : prev)
+  }, [])
+
   const verifyEmail = useCallback(async (token) => {
     const res = await fetch(`${API}/api/auth/verify-email?token=${encodeURIComponent(token)}`)
     const data = await res.json()
@@ -77,15 +81,40 @@ export function AuthProvider({ children }) {
     return data
   }, [])
 
+  const forgotPassword = useCallback(async (email) => {
+    const res = await fetch(`${API}/api/auth/forgot-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error(data.error || 'Request failed.')
+    return data
+  }, [])
+
+  const resetPassword = useCallback(async (token, password) => {
+    const res = await fetch(`${API}/api/auth/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, password }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error(data.error || 'Reset failed.')
+    return data
+  }, [])
+
   const value = useMemo(() => ({
     user,
     loading,
     register,
     login,
     logout,
+    updateUser,
     verifyEmail,
     resendVerification,
-  }), [user, loading, register, login, logout, verifyEmail, resendVerification])
+    forgotPassword,
+    resetPassword,
+  }), [user, loading, register, login, logout, updateUser, verifyEmail, resendVerification, forgotPassword, resetPassword])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

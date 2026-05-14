@@ -1,18 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 
-/**
- * Full-page component shown at /verify-email?token=<...>
- *
- * It reads the token from the URL, calls the API, then either shows success
- * (auto-redirect to main app) or an error message.
- *
- * Props:
- *  onVerified  ()=>void — called after successful verification so App can
- *                         close this page and return to the main UI.
- */
-export default function EmailVerifyPage({ onVerified }) {
+export default function EmailVerifyPage() {
   const { verifyEmail } = useAuth()
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [status, setStatus] = useState('loading')  // 'loading' | 'success' | 'error'
   const [message, setMessage] = useState('')
   const calledRef = useRef(false)
@@ -21,8 +14,7 @@ export default function EmailVerifyPage({ onVerified }) {
     if (calledRef.current) return
     calledRef.current = true
 
-    const params = new URLSearchParams(window.location.search)
-    const token = params.get('token')
+    const token = searchParams.get('token')
 
     if (!token) {
       setStatus('error')
@@ -34,18 +26,13 @@ export default function EmailVerifyPage({ onVerified }) {
       .then(({ message: msg }) => {
         setMessage(msg || 'Email verified! Redirecting…')
         setStatus('success')
-        // Give the user a moment to read the message, then redirect.
-        setTimeout(() => {
-          // Strip the ?token=... query string so the URL is clean.
-          window.history.replaceState({}, '', '/')
-          onVerified()
-        }, 2000)
+        setTimeout(() => navigate('/', { replace: true }), 2000)
       })
       .catch((err) => {
         setStatus('error')
         setMessage(err.message || 'Verification failed.')
       })
-  }, [verifyEmail, onVerified])
+  }, [verifyEmail, searchParams, navigate])
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-stone-100 p-6">

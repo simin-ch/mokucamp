@@ -3,15 +3,15 @@ import { createPortal } from 'react-dom'
 import { useAuth } from '../hooks/useAuth'
 
 /**
- * Modal with three views: 'login' | 'register' | 'check-email'
+ * Modal views: 'login' | 'register' | 'check-email' | 'forgot-password' | 'reset-email-sent'
  *
  * Props:
  *  open     boolean  — whether the modal is visible
  *  onClose  ()=>void — called when user dismisses the modal
  */
 export default function LoginModal({ open, onClose }) {
-  const { login, register, resendVerification } = useAuth()
-  const [view, setView] = useState('login')   // 'login' | 'register' | 'check-email'
+  const { login, register, resendVerification, forgotPassword } = useAuth()
+  const [view, setView] = useState('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -82,6 +82,40 @@ export default function LoginModal({ open, onClose }) {
     }
   }
 
+  async function handleForgotSubmit(e) {
+    e.preventDefault()
+    setError('')
+    setInfo('')
+    if (!email.trim()) {
+      setError('Please enter your email address.')
+      return
+    }
+    setSubmitting(true)
+    try {
+      await forgotPassword(email.trim())
+      setPendingEmail(email.trim())
+      setView('reset-email-sent')
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handleResendReset() {
+    setError('')
+    setInfo('')
+    setSubmitting(true)
+    try {
+      await forgotPassword(pendingEmail)
+      setInfo('If an account exists for that email, a new reset link has been sent.')
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   const modal = (
     /* Backdrop — rendered via portal directly into document.body to avoid
        Leaflet's z-index (1000+) stacking context swallowing the overlay. */
@@ -101,6 +135,90 @@ export default function LoginModal({ open, onClose }) {
             <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
           </svg>
         </button>
+
+        {/* ── Password reset: email sent ── */}
+        {view === 'reset-email-sent' && (
+          <div className="text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="2" y="4" width="20" height="16" rx="2" />
+                <path d="m2 7 10 7 10-7" />
+              </svg>
+            </div>
+            <h2 className="mb-2 text-xl font-bold text-stone-900">Check your inbox</h2>
+            <p className="mb-1 text-sm text-stone-600">
+              If an account exists for
+            </p>
+            <p className="mb-6 font-semibold text-emerald-700">{pendingEmail}</p>
+            <p className="mb-6 text-xs text-stone-500">
+              We sent a link to reset your password. It expires in 1 hour.
+            </p>
+            {error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
+            {info && <p className="mb-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{info}</p>}
+            <button
+              type="button"
+              onClick={handleResendReset}
+              disabled={submitting}
+              className="mb-3 w-full rounded-xl border border-stone-200 py-2.5 text-sm font-medium text-stone-600 hover:bg-stone-50 disabled:opacity-50"
+            >
+              {submitting ? 'Sending…' : 'Resend reset link'}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setView('login'); setEmail(pendingEmail) }}
+              className="text-sm text-emerald-600 hover:underline"
+            >
+              Back to login
+            </button>
+          </div>
+        )}
+
+        {/* ── Forgot password (email only) ── */}
+        {view === 'forgot-password' && (
+          <>
+            <h2 className="mb-1 text-center text-xl font-bold text-stone-900">Reset password</h2>
+            <p className="mb-6 text-center text-sm text-stone-500">
+              Enter your email and we&apos;ll send you a link if an account exists.
+            </p>
+            <form onSubmit={handleForgotSubmit} noValidate className="space-y-4">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-stone-600" htmlFor="forgot-email">
+                  Email address
+                </label>
+                <input
+                  ref={emailRef}
+                  id="forgot-email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="w-full rounded-xl border border-stone-200 px-3.5 py-2.5 text-sm outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+                />
+              </div>
+              {error && (
+                <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
+              )}
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full rounded-xl bg-emerald-600 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+              >
+                {submitting ? 'Sending…' : 'Send reset link'}
+              </button>
+            </form>
+            <p className="mt-5 text-center text-sm text-stone-500">
+              <button
+                type="button"
+                onClick={() => { setView('login'); setError('') }}
+                className="font-medium text-emerald-600 hover:underline"
+              >
+                Back to login
+              </button>
+            </p>
+          </>
+        )}
 
         {/* ── Check-email view ── */}
         {view === 'check-email' && (
@@ -140,7 +258,7 @@ export default function LoginModal({ open, onClose }) {
         )}
 
         {/* ── Login / Register form ── */}
-        {view !== 'check-email' && (
+        {view !== 'check-email' && view !== 'reset-email-sent' && view !== 'forgot-password' && (
           <>
             <h2 className="mb-6 text-center text-xl font-bold text-stone-900">
               {view === 'login' ? 'Welcome back' : 'Create an account'}
@@ -167,9 +285,20 @@ export default function LoginModal({ open, onClose }) {
 
               {/* Password */}
               <div>
-                <label className="mb-1 block text-xs font-medium text-stone-600" htmlFor="auth-password">
-                  Password
-                </label>
+                <div className="mb-1 flex items-center justify-between">
+                  <label className="block text-xs font-medium text-stone-600" htmlFor="auth-password">
+                    Password
+                  </label>
+                  {view === 'login' && (
+                    <button
+                      type="button"
+                      onClick={() => { setView('forgot-password'); setError('') }}
+                      className="text-xs font-medium text-emerald-600 hover:underline"
+                    >
+                      Forgot password?
+                    </button>
+                  )}
+                </div>
                 <input
                   id="auth-password"
                   type="password"

@@ -22,12 +22,18 @@ function LandscapeTags({ landscape }) {
 /**
  * A single row in the dropdown list.
  */
-function ShortlistRow({ campsite: c, onToggleShortlist }) {
+function ShortlistRow({ campsite: c, onToggleShortlist, onLocate }) {
   return (
     <li className="group flex items-start gap-3 rounded-lg px-3 py-2.5 hover:bg-stone-50">
       {/* Text content */}
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-stone-900">{c.name}</p>
+        <button
+          type="button"
+          onClick={() => onLocate?.(c)}
+          className="truncate text-left text-sm font-semibold text-stone-900 hover:text-emerald-700 hover:underline w-full"
+        >
+          {c.name}
+        </button>
 
         {/* Region */}
         {c.region && (
@@ -86,7 +92,7 @@ function ShortlistRow({ campsite: c, onToggleShortlist }) {
  * Dropdown panel that appears below the Shortlist header button.
  * Closes when the user clicks outside or presses Escape.
  */
-export default function ShortlistDropdown({ open, onClose, items, onToggleShortlist, onClear }) {
+export default function ShortlistDropdown({ open, onClose, items, onToggleShortlist, onClear, onLocate }) {
   const panelRef = useRef(null)
 
   // Close on Escape
@@ -172,6 +178,7 @@ export default function ShortlistDropdown({ open, onClose, items, onToggleShortl
                   key={c.id}
                   campsite={c}
                   onToggleShortlist={onToggleShortlist}
+                  onLocate={(campsite) => { onLocate?.(campsite); onClose() }}
                 />
               ))}
             </ul>
