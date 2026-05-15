@@ -118,6 +118,63 @@ function Section({ title, children }) {
   )
 }
 
+function CampsiteForecastSection({ lat, lon, tripDate }) {
+  const [detailWeather, setDetailWeather] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
+  const dateLine = formatTripDateLabel(tripDate)
+
+  useEffect(() => {
+    const ac = new AbortController()
+    const qs = new URLSearchParams({
+      lat: String(lat),
+      lon: String(lon),
+      date: tripDate,
+    })
+    fetch(`${API_BASE}/api/forecast?${qs}`, { signal: ac.signal })
+      .then(async (res) => {
+        const json = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(json.message || `HTTP ${res.status}`)
+        setDetailWeather(json.data ?? null)
+      })
+      .catch((err) => {
+        if (err.name === 'AbortError') return
+        setDetailWeather(null)
+        setError(true)
+      })
+      .finally(() => {
+        if (!ac.signal.aborted) setLoading(false)
+      })
+    return () => ac.abort()
+  }, [lat, lon, tripDate])
+
+  const summary = detailWeather ? summarizeForecast(detailWeather) : null
+
+  return (
+    <Section title={dateLine ? `Weather Forecast · ${dateLine}` : 'Weather Forecast'}>
+      {loading ? (
+        <p className="text-sm text-stone-500">Loading forecast…</p>
+      ) : error || !summary ? (
+        <p className="text-sm text-stone-500">Weather unavailable</p>
+      ) : (
+        <div className="flex flex-wrap items-start gap-4">
+          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm text-stone-700">
+            <dt className="text-stone-500">Max temp</dt>
+            <dd className="tabular-nums font-medium">{summary.maxTempC} °C</dd>
+            <dt className="text-stone-500">Rain</dt>
+            <dd className="tabular-nums font-medium">{summary.rainMm} mm</dd>
+            <dt className="text-stone-500">Max wind</dt>
+            <dd className="tabular-nums font-medium">{summary.maxWindKmh} km/h</dd>
+          </dl>
+          <span className={`self-start rounded-full px-3 py-1 text-sm font-medium ${labelTone(summary.label)}`}>
+            {summary.label}
+          </span>
+        </div>
+      )}
+    </Section>
+  )
+}
+
 const TABS = [
   { id: 'info', label: 'Info' },
   { id: 'reviews', label: 'Reviews' },
@@ -136,51 +193,13 @@ export default function CampsiteDetailDrawer({
   const open = Boolean(c)
   const shortlisted = c ? isShortlisted?.(c.id) : false
 
+  const campsiteId = c?.id ?? null
   const [activeTab, setActiveTab] = useState('info')
-  const [detailWeather, setDetailWeather] = useState(null)
-  const [detailWeatherLoading, setDetailWeatherLoading] = useState(false)
-  const [detailWeatherError, setDetailWeatherError] = useState(false)
-
-  // Reset tab whenever a different campsite is opened
-  useEffect(() => {
-    if (c) setActiveTab('info')
-  }, [c?.id])
-
-  useEffect(() => {
-    if (!c || !tripDate) {
-      setDetailWeather(null)
-      setDetailWeatherLoading(false)
-      setDetailWeatherError(false)
-      return
-    }
-    const ac = new AbortController()
-    setDetailWeather(null)
-    setDetailWeatherLoading(true)
-    setDetailWeatherError(false)
-    const qs = new URLSearchParams({
-      lat: String(c.lat),
-      lon: String(c.lon),
-      date: tripDate,
-    })
-    fetch(`${API_BASE}/api/forecast?${qs}`, { signal: ac.signal })
-      .then(async (res) => {
-        const json = await res.json().catch(() => ({}))
-        if (!res.ok) throw new Error(json.message || `HTTP ${res.status}`)
-        setDetailWeather(json.data ?? null)
-      })
-      .catch((err) => {
-        if (err.name === 'AbortError') return
-        setDetailWeather(null)
-        setDetailWeatherError(true)
-      })
-      .finally(() => {
-        if (!ac.signal.aborted) setDetailWeatherLoading(false)
-      })
-    return () => ac.abort()
-  }, [c?.id, c?.lat, c?.lon, tripDate])
-
-  const summary = detailWeather ? summarizeForecast(detailWeather) : null
-  const dateLine = formatTripDateLabel(tripDate)
+  const [tabCampsiteId, setTabCampsiteId] = useState(campsiteId)
+  if (campsiteId !== tabCampsiteId) {
+    setTabCampsiteId(campsiteId)
+    if (campsiteId != null) setActiveTab('info')
+  }
 
   const accessItems = parseList(c?.access)
   const activityItems = parseList(c?.activities)
@@ -302,29 +321,13 @@ export default function CampsiteDetailDrawer({
                     </div>
                   </div>
 
-                  {/* Weather — fetched on open (see GET /api/forecast) */}
                   {tripDate && (
-                    <Section title={dateLine ? `Weather Forecast · ${dateLine}` : 'Weather Forecast'}>
-                      {detailWeatherLoading ? (
-                        <p className="text-sm text-stone-500">Loading forecast…</p>
-                      ) : detailWeatherError || !summary ? (
-                        <p className="text-sm text-stone-500">Weather unavailable</p>
-                      ) : (
-                        <div className="flex flex-wrap items-start gap-4">
-                          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm text-stone-700">
-                            <dt className="text-stone-500">Max temp</dt>
-                            <dd className="tabular-nums font-medium">{summary.maxTempC} °C</dd>
-                            <dt className="text-stone-500">Rain</dt>
-                            <dd className="tabular-nums font-medium">{summary.rainMm} mm</dd>
-                            <dt className="text-stone-500">Max wind</dt>
-                            <dd className="tabular-nums font-medium">{summary.maxWindKmh} km/h</dd>
-                          </dl>
-                          <span className={`self-start rounded-full px-3 py-1 text-sm font-medium ${labelTone(summary.label)}`}>
-                            {summary.label}
-                          </span>
-                        </div>
-                      )}
-                    </Section>
+                    <CampsiteForecastSection
+                      key={`${c.id}-${tripDate}`}
+                      lat={c.lat}
+                      lon={c.lon}
+                      tripDate={tripDate}
+                    />
                   )}
 
                   {/* Introduction */}

@@ -24,7 +24,7 @@ export default function HomePage() {
 
   const isMinWidthSm = useMinWidthSm()
   const geocode = useGeocode()
-  const { form, setForm, loading, error, setError, result, setResult, mapResult, setMapResult, fetchCampsites } =
+  const { form, setForm, loading, setError, result, setResult, mapResult, setMapResult, fetchCampsites } =
     useCampsites()
   const recommend = useRecommend()
   const shortlist = useShortlist()

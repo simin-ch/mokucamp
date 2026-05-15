@@ -79,6 +79,16 @@ function scoreLandscape(campsiteLandscape, preferredLandscapes) {
   return campsiteHasAllLandscapes(campsiteLandscape, preferredLandscapes) ? 1.0 : 0.0
 }
 
+/**
+ * Activity score: same rules as landscape — 1.0 when all preferred activities match,
+ * 0.0 when activities exist but not all match, null with no preference, 0.3 if missing data.
+ */
+function scoreActivity(campsiteActivities, preferredActivities) {
+  if (!preferredActivities || preferredActivities.length === 0) return null
+  if (!campsiteActivities) return 0.3
+  return campsiteHasAllActivities(campsiteActivities, preferredActivities) ? 1.0 : 0.0
+}
+
 const FACILITY_KEYS = ['dogsAllowedBool', 'hasToilets', 'hasWater', 'hasPower']
 const DOGS_KEY = 'dogsAllowedBool'
 const OTHER_FACILITY_KEYS = ['hasToilets', 'hasWater', 'hasPower']
@@ -117,11 +127,19 @@ function scoreFacilities(campsite, prefs) {
  * dimensions are absent (user provided no preference). When `date` is sent with a
  * search radius, weather is fetched only for campsites inside that radius and used here.
  *
- * Base weights: landscape 0.35 · facilities 0.35 · distance 0.15 · weather 0.15
+ * Base weights: landscape 0.35 · activity 0.35 · facilities 0.35 · distance 0.15 · weather 0.15
  */
-function computeScore(campsite, { distanceKm, radiusKm, weather, landscapePrefs, facilityPrefs }) {
+function computeScore(campsite, {
+  distanceKm,
+  radiusKm,
+  weather,
+  landscapePrefs,
+  activityPrefs,
+  facilityPrefs,
+}) {
   const dims = [
     { score: scoreLandscape(campsite.landscape, landscapePrefs), weight: 0.35 },
+    { score: scoreActivity(campsite.activities, activityPrefs), weight: 0.35 },
     { score: scoreFacilities(campsite, facilityPrefs), weight: 0.35 },
     { score: scoreDistance(distanceKm, radiusKm), weight: 0.15 },
     { score: scoreWeather(weather), weight: 0.15 },
@@ -284,6 +302,7 @@ router.get('/', async (req, res) => {
           radiusKm: radius,
           weather: c.weather,
           landscapePrefs,
+          activityPrefs,
           facilityPrefs,
         })
         return { ...c, score: Math.round(score * 1000) / 1000 }

@@ -1,7 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import EmailVerifyPage from './components/EmailVerifyPage'
 import ProtectedRoute from './components/ProtectedRoute'
-import { AuthProvider } from './hooks/useAuth'
+import AuthProvider from './hooks/AuthProvider'
 import HomePage from './pages/HomePage'
 import ProfilePage from './pages/ProfilePage'
 import ResetPasswordPage from './pages/ResetPasswordPage'

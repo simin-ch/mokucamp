@@ -1,21 +1,16 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { API, AuthContext, TOKEN_KEY } from './authContext'
 
-const AuthContext = createContext(null)
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:4000'
-const TOKEN_KEY = 'mokucamp_auth_token'
-
-export function AuthProvider({ children }) {
+export default function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)  // true while checking stored token
+  const [loading, setLoading] = useState(
+    () => typeof localStorage !== 'undefined' && Boolean(localStorage.getItem(TOKEN_KEY)),
+  )
 
-  // On mount, restore session from localStorage.
   useEffect(() => {
     const token = localStorage.getItem(TOKEN_KEY)
-    if (!token) {
-      setLoading(false)
-      return
-    }
+    if (!token) return
+
     fetch(`${API}/api/auth/me`, {
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -59,7 +54,7 @@ export function AuthProvider({ children }) {
   }, [])
 
   const updateUser = useCallback((patch) => {
-    setUser((prev) => prev ? { ...prev, ...patch } : prev)
+    setUser((prev) => (prev ? { ...prev, ...patch } : prev))
   }, [])
 
   const verifyEmail = useCallback(async (token) => {
@@ -103,24 +98,32 @@ export function AuthProvider({ children }) {
     return data
   }, [])
 
-  const value = useMemo(() => ({
-    user,
-    loading,
-    register,
-    login,
-    logout,
-    updateUser,
-    verifyEmail,
-    resendVerification,
-    forgotPassword,
-    resetPassword,
-  }), [user, loading, register, login, logout, updateUser, verifyEmail, resendVerification, forgotPassword, resetPassword])
+  const value = useMemo(
+    () => ({
+      user,
+      loading,
+      register,
+      login,
+      logout,
+      updateUser,
+      verifyEmail,
+      resendVerification,
+      forgotPassword,
+      resetPassword,
+    }),
+    [
+      user,
+      loading,
+      register,
+      login,
+      logout,
+      updateUser,
+      verifyEmail,
+      resendVerification,
+      forgotPassword,
+      resetPassword,
+    ],
+  )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
-}
-
-export function useAuth() {
-  const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error('useAuth must be used inside <AuthProvider>')
-  return ctx
 }

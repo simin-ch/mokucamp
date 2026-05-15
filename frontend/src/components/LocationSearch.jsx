@@ -43,7 +43,10 @@ export default function LocationSearch({
         {selectedPlace && !geocodeLoading && (
           <button
             type="button"
-            onMouseDown={clearLocation}
+            onMouseDown={(e) => {
+              e.preventDefault()
+              clearLocation()
+            }}
             className="absolute right-2 top-1/2 -translate-y-1/2 rounded px-2 py-0.5 text-xs text-stone-400 hover:text-stone-700"
           >
             ✕ Clear

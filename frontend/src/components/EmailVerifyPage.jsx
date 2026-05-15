@@ -6,21 +6,16 @@ export default function EmailVerifyPage() {
   const { verifyEmail } = useAuth()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const [status, setStatus] = useState('loading')  // 'loading' | 'success' | 'error'
-  const [message, setMessage] = useState('')
+  const token = searchParams.get('token')
+  const [status, setStatus] = useState(() => (token ? 'loading' : 'error'))
+  const [message, setMessage] = useState(() =>
+    token ? '' : 'Verification token is missing from the URL.',
+  )
   const calledRef = useRef(false)
 
   useEffect(() => {
-    if (calledRef.current) return
+    if (!token || calledRef.current) return
     calledRef.current = true
-
-    const token = searchParams.get('token')
-
-    if (!token) {
-      setStatus('error')
-      setMessage('Verification token is missing from the URL.')
-      return
-    }
 
     verifyEmail(token)
       .then(({ message: msg }) => {
@@ -32,7 +27,7 @@ export default function EmailVerifyPage() {
         setStatus('error')
         setMessage(err.message || 'Verification failed.')
       })
-  }, [verifyEmail, searchParams, navigate])
+  }, [token, verifyEmail, navigate])
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-stone-100 p-6">

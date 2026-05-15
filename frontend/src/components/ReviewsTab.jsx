@@ -98,7 +98,7 @@ function ReviewRow({ review, currentUserId, onDelete, deleting }) {
 // ---------------------------------------------------------------------------
 // Write review form (shown to logged-in users)
 // ---------------------------------------------------------------------------
-function WriteReviewForm({ campsiteId, currentUser, onSubmitSuccess }) {
+function WriteReviewForm({ campsiteId, onSubmitSuccess }) {
   const [rating, setRating] = useState(0)
   const [content, setContent] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -263,11 +263,7 @@ export default function ReviewsTab({ campsiteId }) {
 
       {/* Write review / login prompt */}
       {user ? (
-        <WriteReviewForm
-          campsiteId={campsiteId}
-          currentUser={user}
-          onSubmitSuccess={() => load(1)}
-        />
+        <WriteReviewForm campsiteId={campsiteId} onSubmitSuccess={() => load(1)} />
       ) : (
         <div className="border-t border-stone-100 px-5 py-4">
           <button

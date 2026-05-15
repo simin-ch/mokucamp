@@ -321,6 +321,27 @@ describe('GET /api/recommend', () => {
     ).toBe(true)
   })
 
+  it('respects activity preference when matches exist', async () => {
+    const res = await request(app)
+      .get('/api/recommend')
+      .query({
+        lat: '-36.85',
+        lon: '174.76',
+        radiusKm: '500',
+        activities: 'Walking and tramping',
+        limit: '5',
+      })
+      .expect(200)
+
+    expect(res.body.landscapeNotFound).toBe(false)
+    expect(res.body.data.length).toBeGreaterThanOrEqual(1)
+    expect(
+      res.body.data.some((c) =>
+        String(c.activities || '').toLowerCase().includes('walking and tramping'),
+      ),
+    ).toBe(true)
+  })
+
   it('without location returns unranked list (no scores)', async () => {
     const res = await request(app).get('/api/recommend').expect(200)
 
