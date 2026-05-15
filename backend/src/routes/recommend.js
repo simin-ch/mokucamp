@@ -275,8 +275,31 @@ router.get('/', recommendLimiter, async (req, res) => {
       })
     }
 
-    // Ranked mode only: weather for campsites already inside radius (and other filters).
-    if (tripDate && candidates.length > 0) {
+    const totalCandidates = candidates.length
+
+    // Phase 1: score without weather to narrow down to a small shortlist.
+    // This avoids firing weather requests for every campsite in the radius.
+    const phase1 = candidates
+      .map((c) => ({
+        ...c,
+        score: computeScore(c, {
+          distanceKm: c.distanceKm,
+          radiusKm: radius,
+          weather: undefined,
+          landscapePrefs,
+          activityPrefs,
+          facilityPrefs,
+        }),
+      }))
+      .sort((a, b) => b.score - a.score)
+
+    // Keep a buffer of topN*3 (min 15) so weather can shift rankings within the shortlist.
+    const weatherCandidates = tripDate
+      ? phase1.slice(0, Math.max(topN * 3, 15))
+      : phase1.slice(0, topN)
+
+    // Phase 2: fetch weather only for the shortlisted candidates.
+    if (tripDate && weatherCandidates.length > 0) {
       const weatherByGridKey = new Map()
       const getWeatherShared = (lat, lon) => {
         const gridKey = `${Number(lat).toFixed(2)}:${Number(lon).toFixed(2)}`
@@ -287,33 +310,45 @@ router.get('/', recommendLimiter, async (req, res) => {
         }
         return p
       }
-      candidates = await Promise.all(
-        candidates.map(async (c) => {
+      const withWeather = await Promise.all(
+        weatherCandidates.map(async (c) => {
           const weather = await getWeatherShared(c.lat, c.lon)
           return { ...c, weather }
         }),
       )
+      const scored = withWeather
+        .map((c) => ({
+          ...c,
+          score: Math.round(
+            computeScore(c, {
+              distanceKm: c.distanceKm,
+              radiusKm: radius,
+              weather: c.weather,
+              landscapePrefs,
+              activityPrefs,
+              facilityPrefs,
+            }) * 1000,
+          ) / 1000,
+        }))
+        .sort((a, b) => b.score - a.score)
+        .slice(0, topN)
+
+      return res.json({
+        data: scored.map(toPublicCampsite),
+        total: totalCandidates,
+        landscapeNotFound,
+        ranked: true,
+      })
     }
 
-    // Score and rank (location context required)
-    const scored = candidates
-      .map((c) => {
-        const score = computeScore(c, {
-          distanceKm: c.distanceKm,
-          radiusKm: radius,
-          weather: c.weather,
-          landscapePrefs,
-          activityPrefs,
-          facilityPrefs,
-        })
-        return { ...c, score: Math.round(score * 1000) / 1000 }
-      })
-      .sort((a, b) => b.score - a.score)
+    // No date provided — use phase-1 scores directly.
+    const scored = phase1
       .slice(0, topN)
+      .map((c) => ({ ...c, score: Math.round(c.score * 1000) / 1000 }))
 
     res.json({
       data: scored.map(toPublicCampsite),
-      total: candidates.length,
+      total: totalCandidates,
       landscapeNotFound,
       ranked: true,
     })
