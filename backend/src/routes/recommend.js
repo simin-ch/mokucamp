@@ -3,7 +3,8 @@ const express = require('express')
 const router = express.Router()
 const { PrismaClient } = require('@prisma/client')
 const { fetchWeather } = require('../utils/weather')
-const { withThumbnail } = require('../utils/campsite')
+const { toPublicCampsite } = require('../utils/campsite')
+const { recommendLimiter } = require('../middleware/publicApiRateLimit')
 const { campsiteHasAllLandscapes, campsiteHasAllActivities } = require('../utils/landscape')
 
 const prisma = new PrismaClient()
@@ -168,7 +169,7 @@ function computeScore(campsite, {
  * When lat/lon/radiusKm are not all valid, returns every campsite matching landscape
  * and facility filters (no score, ranked: false). Limit is ignored in that mode.
  */
-router.get('/', async (req, res) => {
+router.get('/', recommendLimiter, async (req, res) => {
   try {
     const {
       lat,
@@ -265,7 +266,7 @@ router.get('/', async (req, res) => {
     }
 
     if (!useDistance) {
-      const data = candidates.map((c) => withThumbnail({ ...c, score: null }))
+      const data = candidates.map((c) => toPublicCampsite({ ...c, score: null }))
       return res.json({
         data,
         total: data.length,
@@ -311,7 +312,7 @@ router.get('/', async (req, res) => {
       .slice(0, topN)
 
     res.json({
-      data: scored.map(withThumbnail),
+      data: scored.map(toPublicCampsite),
       total: candidates.length,
       landscapeNotFound,
       ranked: true,

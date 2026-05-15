@@ -1,6 +1,7 @@
 const express = require('express')
 const { PrismaClient } = require('@prisma/client')
 const authenticate = require('../middleware/authenticate')
+const { publicReviewUser } = require('../utils/reviewUser')
 
 const router = express.Router()
 const prisma = new PrismaClient()
@@ -45,7 +46,7 @@ router.get('/:campsiteId', async (req, res) => {
     prisma.review.count({ where: { campsiteId } }),
     prisma.review.findMany({
       where: { campsiteId },
-      include: { user: { select: { id: true, email: true } } },
+      include: { user: { select: { id: true, username: true } } },
       orderBy: { createdAt: 'desc' },
       skip,
       take: PAGE_SIZE,
@@ -68,7 +69,10 @@ router.get('/:campsiteId', async (req, res) => {
 
   return res.json({
     aggregate: { avg, total, distribution },
-    reviews: rows,
+    reviews: rows.map((r) => ({
+      ...r,
+      user: publicReviewUser(r.user),
+    })),
     page,
     totalPages: Math.ceil(total / PAGE_SIZE) || 1,
   })
@@ -101,10 +105,12 @@ router.post('/:campsiteId', authenticate, async (req, res) => {
     where: { userId_campsiteId: { userId: req.user.id, campsiteId } },
     create: { userId: req.user.id, campsiteId, rating, content: content.trim() },
     update: { rating, content: content.trim() },
-    include: { user: { select: { id: true, email: true } } },
+    include: { user: { select: { id: true, username: true } } },
   })
 
-  return res.status(200).json({ review })
+  return res.status(200).json({
+    review: { ...review, user: publicReviewUser(review.user) },
+  })
 })
 
 // ---------------------------------------------------------------------------

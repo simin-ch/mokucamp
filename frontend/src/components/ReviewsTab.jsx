@@ -55,17 +55,17 @@ function ReviewRow({ review, currentUserId, onDelete, deleting }) {
     year: 'numeric', month: 'short', day: 'numeric',
   })
   const isOwn = currentUserId && review.user.id === currentUserId
-  const emailPrefix = review.user.email.split('@')[0]
+  const displayName = review.user.displayName || 'Camper'
 
   return (
     <div className="border-b border-stone-100 px-5 py-4 last:border-b-0">
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2">
           <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-semibold text-emerald-700">
-            {emailPrefix[0].toUpperCase()}
+            {displayName[0].toUpperCase()}
           </div>
           <div>
-            <p className="text-xs font-medium text-stone-700">{emailPrefix}</p>
+            <p className="text-xs font-medium text-stone-700">{displayName}</p>
             <p className="text-xs text-stone-400">{date}</p>
           </div>
         </div>

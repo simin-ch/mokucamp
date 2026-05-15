@@ -1,5 +1,6 @@
 const express = require('express')
 const axios = require('axios')
+const { geocodeLimiter } = require('../middleware/publicApiRateLimit')
 
 const router = express.Router()
 
@@ -13,7 +14,7 @@ const router = express.Router()
  * bulk / high-frequency requests. The 3-char minimum and frontend debounce
  * keep request volume low for a low-traffic app.
  */
-router.get('/', async (req, res) => {
+router.get('/', geocodeLimiter, async (req, res) => {
   const q = String(req.query.q || '').trim()
   if (q.length < 3) return res.json([])
 

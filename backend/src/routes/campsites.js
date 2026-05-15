@@ -2,7 +2,8 @@ const express = require('express')
 
 const router = express.Router()
 const { PrismaClient } = require('@prisma/client')
-const { withThumbnail } = require('../utils/campsite')
+const { toPublicCampsite } = require('../utils/campsite')
+const { nearbyTracksLimiter } = require('../middleware/publicApiRateLimit')
 const {
   fetchNearbyTracks,
   DEFAULT_RADIUS_KM,
@@ -159,7 +160,7 @@ router.get('/', async (req, res) => {
       const landscapeNotFound = Boolean(landscapeFilter && filtered.length === 0)
 
       const page = filtered.slice(skip, skip + take)
-      const data = page.map(withThumbnail)
+      const data = page.map(toPublicCampsite)
 
       return res.json({
         data,
@@ -175,7 +176,7 @@ router.get('/', async (req, res) => {
     const total = filtered.length
     const rows = filtered.slice(skip, skip + take)
 
-    const data = rows.map(withThumbnail)
+    const data = rows.map(toPublicCampsite)
 
     res.json({ data, total, landscapeNotFound })
   } catch (err) {
@@ -189,7 +190,7 @@ router.get('/', async (req, res) => {
  * GET /api/campsites/:id/nearby-tracks
  * DOC walking/tramping routes within radiusKm of the campsite (default 15 km, max 5).
  */
-router.get('/:id/nearby-tracks', async (req, res) => {
+router.get('/:id/nearby-tracks', nearbyTracksLimiter, async (req, res) => {
   const id = parseInt(req.params.id, 10)
   if (isNaN(id)) return res.status(400).json({ message: 'Invalid id' })
 
@@ -223,7 +224,7 @@ router.get('/:id', async (req, res) => {
   try {
     const campsite = await prisma.campsite.findUnique({ where: { id } })
     if (!campsite) return res.status(404).json({ message: 'Campsite not found' })
-    res.json(withThumbnail(campsite))
+    res.json(toPublicCampsite(campsite))
   } catch (err) {
     console.error(err)
     res.status(500).json({ message: 'Failed to fetch campsite' })

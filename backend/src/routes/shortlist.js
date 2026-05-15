@@ -1,10 +1,12 @@
 const express = require('express')
 const { PrismaClient } = require('@prisma/client')
 const authenticate = require('../middleware/authenticate')
-const { withThumbnail } = require('../utils/campsite')
+const { toPublicCampsite } = require('../utils/campsite')
 
 const router = express.Router()
 const prisma = new PrismaClient()
+
+const MAX_SYNC_IDS = 100
 
 /** Return the campsite rows for a user's shortlist, newest first. */
 async function getUserShortlist(userId) {
@@ -13,7 +15,7 @@ async function getUserShortlist(userId) {
     include: { campsite: true },
     orderBy: { createdAt: 'desc' },
   })
-  return rows.map((r) => withThumbnail(r.campsite))
+  return rows.map((r) => toPublicCampsite(r.campsite))
 }
 
 // ---------------------------------------------------------------------------
@@ -36,6 +38,9 @@ router.post('/sync', authenticate, async (req, res) => {
   const { ids } = req.body
   if (!Array.isArray(ids)) {
     return res.status(400).json({ error: 'ids must be an array of campsite IDs.' })
+  }
+  if (ids.length > MAX_SYNC_IDS) {
+    return res.status(400).json({ error: `ids may contain at most ${MAX_SYNC_IDS} campsite IDs.` })
   }
 
   for (const rawId of ids) {

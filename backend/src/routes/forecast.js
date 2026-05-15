@@ -1,5 +1,6 @@
 const express = require('express')
 const { fetchWeather } = require('../utils/weather')
+const { forecastLimiter } = require('../middleware/publicApiRateLimit')
 
 const router = express.Router()
 const TRIP_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
@@ -10,7 +11,7 @@ const TRIP_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
  * Query: lat, lon, date (YYYY-MM-DD) — single-day Open-Meteo daily payload.
  * For on-demand loads (e.g. campsite detail), not bulk list/recommend.
  */
-router.get('/', async (req, res) => {
+router.get('/', forecastLimiter, async (req, res) => {
   try {
     const lat = parseFloat(req.query.lat)
     const lon = parseFloat(req.query.lon)

@@ -54,7 +54,21 @@ router.post('/register', registerLimiter, async (req, res) => {
 
   const existing = await prisma.user.findUnique({ where: { email } })
   if (existing) {
-    return res.status(409).json({ error: 'An account with this email already exists.' })
+    // Same response as success to avoid email enumeration; resend verify link if still pending.
+    if (!existing.emailVerified) {
+      const { raw: rawToken, hashed: hashedToken } = generateToken()
+      const expiry = new Date(Date.now() + VERIFY_TOKEN_TTL_MS)
+      await prisma.user.update({
+        where: { id: existing.id },
+        data: { verificationToken: hashedToken, verificationTokenExpiry: expiry },
+      })
+      sendVerificationEmail(email, rawToken).catch((err) =>
+        console.error('Failed to send verification email:', err.message),
+      )
+    }
+    return res.status(201).json({
+      message: 'Account created! Please check your email to verify your address before logging in.',
+    })
   }
 
   const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS)

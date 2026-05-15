@@ -12,4 +12,10 @@ function withThumbnail(campsite) {
   }
 }
 
-module.exports = { withThumbnail }
+/** Strip internal/raw DOC fields before sending a campsite to the client. */
+function toPublicCampsite(campsite) {
+  const { properties, geometry, ...rest } = withThumbnail(campsite)
+  return rest
+}
+
+module.exports = { withThumbnail, toPublicCampsite }
