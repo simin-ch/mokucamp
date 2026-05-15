@@ -23,46 +23,50 @@ const campsiteMarkerIcon = new L.Icon({
   popupAnchor: [0, -36],
 })
 
-function makeShortlistIcon() {
-  return L.divIcon({
-    className: '',
-    html: `<div style="
-      background:#7c3aed;
-      color:#fff;
-      width:30px;height:30px;
-      border-radius:50%;
-      display:flex;align-items:center;justify-content:center;
-      border:2px solid #fff;
-      box-shadow:0 2px 6px rgba(0,0,0,.35);
-    ">
-      <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor' width='14' height='14'>
-        <path d='M6 2a2 2 0 0 0-2 2v18l8-4 8 4V4a2 2 0 0 0-2-2H6Z'/>
-      </svg>
-    </div>`,
-    iconSize: [30, 30],
-    iconAnchor: [15, 15],
-    popupAnchor: [0, -18],
-  })
-}
+const shortlistMarkerIcon = L.divIcon({
+  className: '',
+  html: `<div style="
+    background:#7c3aed;
+    color:#fff;
+    width:30px;height:30px;
+    border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    border:2px solid #fff;
+    box-shadow:0 2px 6px rgba(0,0,0,.35);
+  ">
+    <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor' width='14' height='14'>
+      <path d='M6 2a2 2 0 0 0-2 2v18l8-4 8 4V4a2 2 0 0 0-2-2H6Z'/>
+    </svg>
+  </div>`,
+  iconSize: [30, 30],
+  iconAnchor: [15, 15],
+  popupAnchor: [0, -18],
+})
 
-function makeTopPickIcon(rank) {
-  return L.divIcon({
-    className: '',
-    html: `<div style="
-      background:#f59e0b;
-      color:#fff;
-      width:32px;height:32px;
-      border-radius:50%;
-      display:flex;align-items:center;justify-content:center;
-      font-size:13px;font-weight:700;
-      border:2px solid #fff;
-      box-shadow:0 2px 6px rgba(0,0,0,.35);
-      line-height:1;
-    ">${rank}</div>`,
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
-    popupAnchor: [0, -18],
-  })
+// Cache icons by rank so Leaflet receives the same object reference across renders,
+// preventing unnecessary marker DOM teardown/rebuild.
+const topPickIconCache = new Map()
+function getTopPickIcon(rank) {
+  if (!topPickIconCache.has(rank)) {
+    topPickIconCache.set(rank, L.divIcon({
+      className: '',
+      html: `<div style="
+        background:#f59e0b;
+        color:#fff;
+        width:32px;height:32px;
+        border-radius:50%;
+        display:flex;align-items:center;justify-content:center;
+        font-size:13px;font-weight:700;
+        border:2px solid #fff;
+        box-shadow:0 2px 6px rgba(0,0,0,.35);
+        line-height:1;
+      ">${rank}</div>`,
+      iconSize: [32, 32],
+      iconAnchor: [16, 16],
+      popupAnchor: [0, -18],
+    }))
+  }
+  return topPickIconCache.get(rank)
 }
 
 
@@ -493,7 +497,7 @@ export default function CampsiteMap({
         </MarkerClusterGroup>
 
         {topPicks.map((c, i) => (
-          <Marker key={`top-${c.id}`} position={[c.lat, c.lon]} icon={makeTopPickIcon(i + 1)}>
+          <Marker key={`top-${c.id}`} position={[c.lat, c.lon]} icon={getTopPickIcon(i + 1)}>
             <Popup maxWidth={340}>
               <PopupContent c={c} rank={i + 1} isShortlisted={isShortlisted?.(c.id)} {...popupProps} />
             </Popup>
@@ -501,7 +505,7 @@ export default function CampsiteMap({
         ))}
 
         {shortlistMarkers.map((c) => (
-          <Marker key={`sl-${c.id}`} position={[c.lat, c.lon]} icon={makeShortlistIcon()}>
+          <Marker key={`sl-${c.id}`} position={[c.lat, c.lon]} icon={shortlistMarkerIcon}>
             <Popup maxWidth={340}>
               <PopupContent c={c} isShortlisted={isShortlisted?.(c.id)} {...popupProps} />
             </Popup>
