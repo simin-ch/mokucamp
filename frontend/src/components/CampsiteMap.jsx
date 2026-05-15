@@ -332,12 +332,6 @@ function FlyToCampsite({ campsite, onConsumed }) {
 const NZ_CENTER = [-41.2, 173.2]
 const NZ_ZOOM = 5
 
-/** Main NZ + nearby ocean; max zoom-out stays framed on NZ (no whole-world view). */
-const NZ_BOUNDS = L.latLngBounds(
-  L.latLng(-48.3, 164.5),
-  L.latLng(-28.8, 179.99),
-)
-
 export default function CampsiteMap({
   mapResult,
   recommendResult,
@@ -369,6 +363,12 @@ export default function CampsiteMap({
   useEffect(() => {
     if (focusCampsite) setDetailCampsite(focusCampsite)
   }, [focusCampsite])
+
+  const handleHideNearbyTrails = () => {
+    trailsAbortRef.current?.abort()
+    trailsAbortRef.current = null
+    setNearbyTrails(null)
+  }
 
   // Clear map tracks when viewing a different campsite in the drawer
   useEffect(() => {
@@ -445,19 +445,13 @@ export default function CampsiteMap({
     }
   }
 
-  const handleHideNearbyTrails = () => {
-    trailsAbortRef.current?.abort()
-    trailsAbortRef.current = null
-    setNearbyTrails(null)
-  }
-
   useEffect(() => () => trailsAbortRef.current?.abort(), [])
-
-  const popupProps = { onToggleShortlist, onOpenDetail: setDetailCampsite }
 
   const handleCloseDetail = () => {
     setDetailCampsite(null)
   }
+
+  const popupProps = { onToggleShortlist, onOpenDetail: setDetailCampsite }
 
   return (
     <div className="relative h-full w-full overflow-hidden">
@@ -466,8 +460,6 @@ export default function CampsiteMap({
         zoom={NZ_ZOOM}
         className="h-full w-full"
         scrollWheelZoom
-        maxBounds={NZ_BOUNDS}
-        maxBoundsViscosity={1}
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
