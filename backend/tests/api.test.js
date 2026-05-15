@@ -229,6 +229,25 @@ describe('GET /api/campsites', () => {
   })
 })
 
+describe('GET /api/campsites/:id', () => {
+  it('returns a single campsite by id', async () => {
+    const campsite = await prisma.campsite.findFirst({ where: { dataset: 'test', name: 'Test Bay DOC' } })
+    const res = await request(app).get(`/api/campsites/${campsite.id}`).expect(200)
+    expect(res.body.id).toBe(campsite.id)
+    expect(res.body.name).toBe('Test Bay DOC')
+  })
+
+  it('returns 404 for nonexistent campsite', async () => {
+    const res = await request(app).get('/api/campsites/999999').expect(404)
+    expect(res.body.message).toBeDefined()
+  })
+
+  it('returns 400 for non-numeric id', async () => {
+    const res = await request(app).get('/api/campsites/notanid').expect(400)
+    expect(res.body.message).toBeDefined()
+  })
+})
+
 describe('GET /api/campsites/:id/nearby-tracks', () => {
   it('returns nearby DOC tracks (default 3 km, max 5)', async () => {
     const campsite = await prisma.campsite.findFirst({
