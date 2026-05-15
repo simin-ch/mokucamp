@@ -378,7 +378,7 @@ export default function ProfilePage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-2xl px-5 py-8">
+      <main className="mx-auto w-full max-w-2xl bg-white px-5 py-8 min-h-[calc(100vh-3.75rem)]">
         {/* User info banner */}
         <div className="mb-6 flex items-center gap-4">
           <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 text-xl font-bold select-none">

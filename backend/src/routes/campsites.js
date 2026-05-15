@@ -2,7 +2,6 @@ const express = require('express')
 
 const router = express.Router()
 const { PrismaClient } = require('@prisma/client')
-const { fetchWeather } = require('../utils/weather')
 const { withThumbnail } = require('../utils/campsite')
 
 const prisma = new PrismaClient()
@@ -43,24 +42,8 @@ function haversineKm(lat1, lon1, lat2, lon2) {
  *   - lat: centre latitude for distance filtering (WGS84)
  *   - lon: centre longitude for distance filtering (WGS84)
  *   - radiusKm: include only campsites within this radius; results sorted by distance
- *   - date: YYYY-MM-DD; when set, single-day forecast is attached per campsite
  *   - landscape: filter to campsites whose landscape field contains this value (e.g. "Coastal")
  */
-const TRIP_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
-
-async function attachWeather(rows, tripDate) {
-  return Promise.all(
-    rows.map(async (c) => {
-      try {
-        const daily = await fetchWeather(c.lat, c.lon, tripDate)
-        return { ...c, weather: daily }
-      } catch {
-        return { ...c, weather: null }
-      }
-    }),
-  )
-}
-
 router.get('/', async (req, res) => {
   try {
     const {
@@ -77,12 +60,7 @@ router.get('/', async (req, res) => {
       lat,
       lon,
       radiusKm,
-      date: dateQuery,
     } = req.query || {}
-
-    const tripDateRaw = dateQuery != null && String(dateQuery).trim() !== '' ? String(dateQuery).trim() : null
-    const wantWeather = Boolean(tripDateRaw && TRIP_DATE_RE.test(tripDateRaw))
-    const tripDate = wantWeather ? tripDateRaw : null
 
     const rawLimit = Number(limit)
     const take = rawLimit > 0
@@ -162,8 +140,7 @@ router.get('/', async (req, res) => {
       }
 
       const page = filtered.slice(skip, skip + take)
-      const weathered = wantWeather ? await attachWeather(page, tripDate) : page
-      const data = weathered.map(withThumbnail)
+      const data = page.map(withThumbnail)
 
       return res.json({
         data,
@@ -187,8 +164,7 @@ router.get('/', async (req, res) => {
       landscapeNotFound = true
     }
 
-    const weathered = wantWeather ? await attachWeather(rows, tripDate) : rows
-    const data = weathered.map(withThumbnail)
+    const data = rows.map(withThumbnail)
 
     res.json({ data, total, landscapeNotFound })
   } catch (err) {

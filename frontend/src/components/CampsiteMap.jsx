@@ -13,15 +13,13 @@ L.Icon.Default.mergeOptions({
   shadowUrl: new URL('leaflet/dist/images/marker-shadow.png', import.meta.url).href,
 })
 
-const greenIcon = new L.Icon({
-  iconUrl: new URL('leaflet/dist/images/marker-icon.png', import.meta.url).href,
-  iconRetinaUrl: new URL('leaflet/dist/images/marker-icon-2x.png', import.meta.url).href,
-  shadowUrl: new URL('leaflet/dist/images/marker-shadow.png', import.meta.url).href,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-  className: 'campsite-marker-green',
+/** Regular campsite pins (public/ — Vite serves at site root). */
+const CAMPSITE_ICON_SIZE = [44, 44]
+const campsiteMarkerIcon = new L.Icon({
+  iconUrl: '/images/f2709e06-0c5f-4187-80fb-8001a87a01f1.png',
+  iconSize: CAMPSITE_ICON_SIZE,
+  iconAnchor: [22, 38],
+  popupAnchor: [0, -36],
 })
 
 function makeShortlistIcon() {
@@ -260,7 +258,10 @@ export default function CampsiteMap({ mapResult, recommendResult, selectedPlace,
   }, [focusCampsite])
 
   const campsites = mapResult?.data ?? []
-  const topPicks = recommendResult?.landscapeNotFound ? [] : (recommendResult?.data ?? [])
+  // Only numbered "Top Pick" markers when recommendations are ranked (search has a location).
+  const rankedRecommend = recommendResult?.ranked !== false
+  const topPicks =
+    !rankedRecommend || recommendResult?.landscapeNotFound ? [] : (recommendResult?.data ?? [])
   const topPickIds = new Set(topPicks.map((c) => c.id))
   const shortlistIds = new Set(shortlistItems.map((c) => c.id))
 
@@ -304,7 +305,7 @@ export default function CampsiteMap({ mapResult, recommendResult, selectedPlace,
           maxClusterRadius={50}
         >
           {regularCampsites.map((c) => (
-            <Marker key={c.id} position={[c.lat, c.lon]} icon={greenIcon}>
+            <Marker key={c.id} position={[c.lat, c.lon]} icon={campsiteMarkerIcon}>
               <Popup maxWidth={340}>
                 <PopupContent c={c} isShortlisted={isShortlisted?.(c.id)} {...popupProps} />
               </Popup>

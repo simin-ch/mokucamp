@@ -23,6 +23,25 @@ function haversineKm(lat1, lon1, lat2, lon2) {
   return R * 2 * Math.asin(Math.sqrt(a))
 }
 
+/** ~km per degree latitude (WGS84 approximation). */
+const KM_PER_DEG_LAT = 111.32
+
+/**
+ * Axis-aligned bounding box in degrees for a circle of radiusKm around the center.
+ * Narrows Prisma via @@index([lat, lon]); callers still filter with Haversine.
+ */
+function boundingBoxForRadiusKm(centerLat, centerLon, radiusKm) {
+  const latDelta = radiusKm / KM_PER_DEG_LAT
+  const cosLat = Math.cos((centerLat * Math.PI) / 180)
+  const lonDelta = radiusKm / (KM_PER_DEG_LAT * Math.max(Math.abs(cosLat), 0.001))
+  return {
+    latMin: centerLat - latDelta,
+    latMax: centerLat + latDelta,
+    lonMin: centerLon - lonDelta,
+    lonMax: centerLon + lonDelta,
+  }
+}
+
 // ─── Scoring helpers ──────────────────────────────────────────────────────────
 
 /**
@@ -61,30 +80,52 @@ function scoreLandscape(campsiteLandscape, preferredLandscapes) {
   return matched ? 1.0 : 0.0
 }
 
+const FACILITY_KEYS = ['dogsAllowedBool', 'hasToilets', 'hasWater', 'hasPower']
+const DOGS_KEY = 'dogsAllowedBool'
+const OTHER_FACILITY_KEYS = ['hasToilets', 'hasWater', 'hasPower']
+
+/** Drop campsites missing any user-required facility (strict `=== true`). */
+function hardFilterByFacilities(campsites, prefs) {
+  const required = FACILITY_KEYS.filter((k) => prefs[k] === 'true')
+  if (required.length === 0) return campsites
+  return campsites.filter((c) => required.every((k) => c[k] === true))
+}
+
 /**
- * Facility score: fraction of user-required facilities the campsite provides.
- * Returns null when the user expressed no facility requirements.
+ * Weighted facility match among user requirements: dogsAllowedBool counts double,
+ * hasToilets / hasWater / hasPower count equally. Returns null when no requirements.
  */
 function scoreFacilities(campsite, prefs) {
-  const KEYS = ['dogsAllowedBool', 'hasToilets', 'hasWater', 'hasPower']
-  const required = KEYS.filter((k) => prefs[k] === 'true')
-  if (required.length === 0) return null
-  const matched = required.filter((k) => campsite[k] === true).length
-  return matched / required.length
+  const dogsRequired = prefs[DOGS_KEY] === 'true'
+  const othersRequired = OTHER_FACILITY_KEYS.filter((k) => prefs[k] === 'true')
+  if (!dogsRequired && othersRequired.length === 0) return null
+
+  let earned = 0
+  let possible = 0
+  if (dogsRequired) {
+    possible += 2
+    if (campsite[DOGS_KEY] === true) earned += 2
+  }
+  for (const k of othersRequired) {
+    possible += 1
+    if (campsite[k] === true) earned += 1
+  }
+  return possible > 0 ? earned / possible : null
 }
 
 /**
  * Combine dimension scores with fixed weights, normalising when some
- * dimensions are absent (user provided no preference / no date).
+ * dimensions are absent (user provided no preference). When `date` is sent with a
+ * search radius, weather is fetched only for campsites inside that radius and used here.
  *
- * Base weights: distance 0.40 · weather 0.30 · landscape 0.15 · facility 0.15
+ * Base weights: landscape 0.35 · facilities 0.35 · distance 0.15 · weather 0.15
  */
 function computeScore(campsite, { distanceKm, radiusKm, weather, landscapePrefs, facilityPrefs }) {
   const dims = [
-    { score: scoreDistance(distanceKm, radiusKm), weight: 0.40 },
-    { score: scoreWeather(weather), weight: 0.30 },
-    { score: scoreLandscape(campsite.landscape, landscapePrefs), weight: 0.15 },
-    { score: scoreFacilities(campsite, facilityPrefs), weight: 0.15 },
+    { score: scoreLandscape(campsite.landscape, landscapePrefs), weight: 0.35 },
+    { score: scoreFacilities(campsite, facilityPrefs), weight: 0.35 },
+    { score: scoreDistance(distanceKm, radiusKm), weight: 0.15 },
+    { score: scoreWeather(weather), weight: 0.15 },
   ].filter((d) => d.score !== null)
 
   if (dims.length === 0) return 0
@@ -100,12 +141,15 @@ function computeScore(campsite, { distanceKm, radiusKm, weather, landscapePrefs,
  *
  * Query params:
  *   - lat, lon, radiusKm  location context (all required for distance scoring)
- *   - date                YYYY-MM-DD; when set, weather is fetched per campsite
+ *   - date                YYYY-MM-DD; with radius, fetches Open-Meteo only for campsites inside radius (ranking)
  *   - landscapes          comma-separated preferred landscape types
  *                         e.g. "Coastal,Alpine"
  *   - dogsAllowedBool, hasToilets, hasWater, hasPower
  *                         "true" = user requires this facility
- *   - limit               number of top results to return (default 10)
+ *   - limit               max ranked results when lat/lon/radius set (default 5, cap 50)
+ *
+ * When lat/lon/radiusKm are not all valid, returns every campsite matching landscape
+ * and facility filters (no score, ranked: false). Limit is ignored in that mode.
  */
 router.get('/', async (req, res) => {
   try {
@@ -143,8 +187,20 @@ router.get('/', async (req, res) => {
 
     const topN = Math.min(Math.max(Number(limit) || DEFAULT_TOP_N, 1), 50)
 
-    // Fetch candidates: when location is provided, restrict to radius
-    let candidates = await prisma.campsite.findMany({ orderBy: { id: 'asc' } })
+    // Fetch candidates: with location, DB bbox + index first, then precise Haversine.
+    let candidates
+    if (useDistance) {
+      const box = boundingBoxForRadiusKm(centerLat, centerLon, radius)
+      candidates = await prisma.campsite.findMany({
+        where: {
+          lat: { gte: box.latMin, lte: box.latMax },
+          lon: { gte: box.lonMin, lte: box.lonMax },
+        },
+        orderBy: { id: 'asc' },
+      })
+    } else {
+      candidates = await prisma.campsite.findMany({ orderBy: { id: 'asc' } })
+    }
 
     if (useDistance) {
       candidates = candidates
@@ -156,6 +212,8 @@ router.get('/', async (req, res) => {
     } else {
       candidates = candidates.map((c) => ({ ...c, distanceKm: null }))
     }
+
+    candidates = hardFilterByFacilities(candidates, facilityPrefs)
 
     // When landscape preference is set, hard-filter to matching campsites only.
     let landscapeNotFound = false
@@ -172,28 +230,42 @@ router.get('/', async (req, res) => {
       }
     }
 
-    // Attach weather in parallel
-    if (tripDate) {
-      candidates = await Promise.all(
-        candidates.map(async (c) => {
-          try {
-            const weather = await fetchWeather(c.lat, c.lon, tripDate)
-            return { ...c, weather }
-          } catch {
-            return { ...c, weather: null }
-          }
-        }),
-      )
-    } else {
-      candidates = candidates.map((c) => ({ ...c, weather: null }))
+    if (!useDistance) {
+      const data = candidates.map((c) => withThumbnail({ ...c, score: null }))
+      return res.json({
+        data,
+        total: data.length,
+        landscapeNotFound,
+        ranked: false,
+      })
     }
 
-    // Score and rank
+    // Ranked mode only: weather for campsites already inside radius (and other filters).
+    if (tripDate && candidates.length > 0) {
+      const weatherByGridKey = new Map()
+      const getWeatherShared = (lat, lon) => {
+        const gridKey = `${Number(lat).toFixed(2)}:${Number(lon).toFixed(2)}`
+        let p = weatherByGridKey.get(gridKey)
+        if (!p) {
+          p = fetchWeather(lat, lon, tripDate).catch(() => null)
+          weatherByGridKey.set(gridKey, p)
+        }
+        return p
+      }
+      candidates = await Promise.all(
+        candidates.map(async (c) => {
+          const weather = await getWeatherShared(c.lat, c.lon)
+          return { ...c, weather }
+        }),
+      )
+    }
+
+    // Score and rank (location context required)
     const scored = candidates
       .map((c) => {
         const score = computeScore(c, {
           distanceKm: c.distanceKm,
-          radiusKm: useDistance ? radius : null,
+          radiusKm: radius,
           weather: c.weather,
           landscapePrefs,
           facilityPrefs,
@@ -203,7 +275,12 @@ router.get('/', async (req, res) => {
       .sort((a, b) => b.score - a.score)
       .slice(0, topN)
 
-    res.json({ data: scored.map(withThumbnail), total: candidates.length, landscapeNotFound })
+    res.json({
+      data: scored.map(withThumbnail),
+      total: candidates.length,
+      landscapeNotFound,
+      ranked: true,
+    })
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error(err)

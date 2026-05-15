@@ -3,6 +3,8 @@ import { formatTripDateLabel } from '../utils/formatTripDate'
 import { summarizeForecast } from '../utils/weatherSummary'
 import ReviewsTab from './ReviewsTab'
 
+const API_BASE = import.meta.env.VITE_API_URL ?? ''
+
 const ACCESS_ICONS = {
   'Car': '🚗',
   'Campervan': '🚐',
@@ -45,6 +47,37 @@ function parseList(str) {
   return str.split(',').map((s) => s.trim()).filter(Boolean)
 }
 
+/** When both generic "Toilets" and "Toilets - non-flush" appear, keep only the specific line. */
+function dedupeToiletFacilities(items) {
+  const norm = (s) => s.trim().toLowerCase().replace(/\s+/g, ' ')
+  const hasNonFlush = items.some((s) => norm(s) === 'toilets - non-flush')
+  if (!hasNonFlush) return items
+  return items.filter((s) => norm(s) !== 'toilets')
+}
+
+const MERGED_WATER_TAP_BOIL = 'Water from tap - not treated, boil before use'
+
+/** Join adjacent tap-water + boil note into one facility line. */
+function mergeWaterTapBoilAdjacent(items) {
+  const norm = (s) => s.trim().toLowerCase().replace(/\s+/g, ' ')
+  const out = []
+  for (let i = 0; i < items.length; i++) {
+    const cur = items[i]
+    const next = items[i + 1]
+    if (
+      next !== undefined &&
+      norm(cur) === 'water from tap - not treated' &&
+      norm(next) === 'boil before use'
+    ) {
+      out.push(MERGED_WATER_TAP_BOIL)
+      i++
+    } else {
+      out.push(cur)
+    }
+  }
+  return out
+}
+
 function labelTone(label) {
   if (label === 'Good') return 'bg-emerald-100 text-emerald-900'
   if (label === 'Fair') return 'bg-amber-100 text-amber-900'
@@ -82,18 +115,54 @@ export default function CampsiteDetailDrawer({ campsite: c, tripDate, onClose, o
   const shortlisted = c ? isShortlisted?.(c.id) : false
 
   const [activeTab, setActiveTab] = useState('info')
+  const [detailWeather, setDetailWeather] = useState(null)
+  const [detailWeatherLoading, setDetailWeatherLoading] = useState(false)
+  const [detailWeatherError, setDetailWeatherError] = useState(false)
 
   // Reset tab whenever a different campsite is opened
   useEffect(() => {
     if (c) setActiveTab('info')
   }, [c?.id])
 
-  const summary = c?.weather === null ? null : summarizeForecast(c?.weather)
+  useEffect(() => {
+    if (!c || !tripDate) {
+      setDetailWeather(null)
+      setDetailWeatherLoading(false)
+      setDetailWeatherError(false)
+      return
+    }
+    const ac = new AbortController()
+    setDetailWeather(null)
+    setDetailWeatherLoading(true)
+    setDetailWeatherError(false)
+    const qs = new URLSearchParams({
+      lat: String(c.lat),
+      lon: String(c.lon),
+      date: tripDate,
+    })
+    fetch(`${API_BASE}/api/forecast?${qs}`, { signal: ac.signal })
+      .then(async (res) => {
+        const json = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(json.message || `HTTP ${res.status}`)
+        setDetailWeather(json.data ?? null)
+      })
+      .catch((err) => {
+        if (err.name === 'AbortError') return
+        setDetailWeather(null)
+        setDetailWeatherError(true)
+      })
+      .finally(() => {
+        if (!ac.signal.aborted) setDetailWeatherLoading(false)
+      })
+    return () => ac.abort()
+  }, [c?.id, c?.lat, c?.lon, tripDate])
+
+  const summary = detailWeather ? summarizeForecast(detailWeather) : null
   const dateLine = formatTripDateLabel(tripDate)
 
   const accessItems = parseList(c?.access)
   const activityItems = parseList(c?.activities)
-  const facilityItems = parseList(c?.facilities)
+  const facilityItems = mergeWaterTapBoilAdjacent(dedupeToiletFacilities(parseList(c?.facilities)))
   const dogsText = stripHtml(c?.dogsAllowed)
 
   return (
@@ -204,10 +273,12 @@ export default function CampsiteDetailDrawer({ campsite: c, tripDate, onClose, o
                     </div>
                   </div>
 
-                  {/* Weather */}
-                  {c.weather !== undefined && (
+                  {/* Weather — fetched on open (see GET /api/forecast) */}
+                  {tripDate && (
                     <Section title={dateLine ? `Weather Forecast · ${dateLine}` : 'Weather Forecast'}>
-                      {c.weather === null || !summary ? (
+                      {detailWeatherLoading ? (
+                        <p className="text-sm text-stone-500">Loading forecast…</p>
+                      ) : detailWeatherError || !summary ? (
                         <p className="text-sm text-stone-500">Weather unavailable</p>
                       ) : (
                         <div className="flex flex-wrap items-start gap-4">

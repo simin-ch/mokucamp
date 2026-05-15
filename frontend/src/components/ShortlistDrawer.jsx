@@ -1,5 +1,55 @@
 import { useEffect } from 'react'
-import CampsiteCard from './CampsiteCard'
+
+function BookmarkIcon({ filled }) {
+  return filled ? (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+      <path d="M6 2a2 2 0 0 0-2 2v18l8-4 8 4V4a2 2 0 0 0-2-2H6Z" />
+    </svg>
+  ) : (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+      <path d="M6 2a2 2 0 0 0-2 2v18l8-4 8 4V4a2 2 0 0 0-2-2H6Z" />
+    </svg>
+  )
+}
+
+function ShortlistItem({ campsite: c, onToggleShortlist, isShortlisted }) {
+  return (
+    <div className="overflow-hidden rounded-xl border border-stone-200/90 bg-white/85 shadow-sm">
+      <div className="flex items-start justify-between gap-2 border-b border-stone-100 px-3 py-2.5">
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate text-sm font-semibold text-stone-900">{c.name}</h3>
+          <p className="truncate text-xs text-stone-500">{[c.place, c.region].filter(Boolean).join(' · ') || '—'}</p>
+        </div>
+        {onToggleShortlist && (
+          <button
+            type="button"
+            onClick={() => onToggleShortlist(c)}
+            title={isShortlisted ? 'Remove from shortlist' : 'Add to shortlist'}
+            className={`shrink-0 rounded-lg border p-1.5 transition-colors ${
+              isShortlisted
+                ? 'border-violet-200 bg-violet-50 text-violet-600 hover:bg-violet-100'
+                : 'border-stone-200 bg-white/60 text-stone-400 hover:border-stone-300 hover:text-stone-600'
+            }`}
+          >
+            <BookmarkIcon filled={isShortlisted} />
+          </button>
+        )}
+      </div>
+      {c.staticLink && (
+        <div className="px-3 py-2">
+          <a
+            href={c.staticLink}
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs font-medium text-emerald-700 hover:text-emerald-800 hover:underline"
+          >
+            Open official page
+          </a>
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function ShortlistDrawer({ open, onClose, items, onToggleShortlist, isShortlisted, onClear, onLocate }) {
   // Close on Escape key
@@ -77,13 +127,13 @@ export default function ShortlistDrawer({ open, onClose, items, onToggleShortlis
               </svg>
               <p className="text-sm text-stone-500">No campsites saved yet.</p>
               <p className="text-xs text-stone-400">
-                Tap the bookmark icon on any campsite card to save it here.
+                Use the bookmark in the map popup or campsite detail to save sites here.
               </p>
             </div>
           ) : (
-            <ul className="space-y-4 list-none pl-0">
+            <ul className="list-none space-y-3 pl-0">
               {items.map((c) => (
-                <div key={c.id}>
+                <li key={c.id} className="list-none">
                   {onLocate && (
                     <button
                       type="button"
@@ -98,12 +148,12 @@ export default function ShortlistDrawer({ open, onClose, items, onToggleShortlis
                       View on map
                     </button>
                   )}
-                  <CampsiteCard
+                  <ShortlistItem
                     campsite={c}
                     onToggleShortlist={onToggleShortlist}
                     isShortlisted={isShortlisted(c.id)}
                   />
-                </div>
+                </li>
               ))}
             </ul>
           )}

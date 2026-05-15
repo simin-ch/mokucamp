@@ -16,7 +16,12 @@ export function useRecommend() {
       if (!res.ok) {
         throw new Error(json.message || `HTTP ${res.status}`)
       }
-      setResult({ data: json.data ?? [], total: json.total ?? 0, landscapeNotFound: json.landscapeNotFound ?? false })
+      setResult({
+        data: json.data ?? [],
+        total: json.total ?? 0,
+        landscapeNotFound: json.landscapeNotFound ?? false,
+        ranked: json.ranked !== false,
+      })
     } catch (e) {
       setError(e.message || 'Failed to load recommendations')
       setResult(null)

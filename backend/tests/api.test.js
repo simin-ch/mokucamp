@@ -160,6 +160,13 @@ describe('GET /api/campsites', () => {
   })
 })
 
+describe('GET /api/forecast', () => {
+  it('returns 400 without lat, lon, date', async () => {
+    const res = await request(app).get('/api/forecast').expect(400)
+    expect(res.body.message).toBeDefined()
+  })
+})
+
 describe('GET /api/recommend', () => {
   it('returns ranked results with location context', async () => {
     const res = await request(app)
@@ -167,7 +174,7 @@ describe('GET /api/recommend', () => {
       .query({ lat: '-36.85', lon: '174.76', radiusKm: '500', limit: '10' })
       .expect(200)
 
-    expect(res.body).toMatchObject({ landscapeNotFound: false })
+    expect(res.body).toMatchObject({ landscapeNotFound: false, ranked: true })
     expect(res.body.total).toBeGreaterThanOrEqual(1)
     expect(res.body.data.length).toBeGreaterThanOrEqual(1)
     expect(res.body.data[0]).toHaveProperty('score')
@@ -191,5 +198,26 @@ describe('GET /api/recommend', () => {
     expect(
       res.body.data.some((c) => String(c.landscape || '').toLowerCase().includes('coastal')),
     ).toBe(true)
+  })
+
+  it('without location returns unranked list (no scores)', async () => {
+    const res = await request(app).get('/api/recommend').expect(200)
+
+    expect(res.body).toMatchObject({ ranked: false, landscapeNotFound: false })
+    expect(res.body.data.length).toBe(res.body.total)
+    expect(res.body.data.length).toBeGreaterThanOrEqual(1)
+    expect(res.body.data.every((c) => c.score === null)).toBe(true)
+  })
+
+  it('with location still returns ranked scores and respects facility filter', async () => {
+    const res = await request(app)
+      .get('/api/recommend')
+      .query({ lat: '-36.85', lon: '174.76', radiusKm: '500', dogsAllowedBool: 'true', limit: '20' })
+      .expect(200)
+
+    expect(res.body.ranked).toBe(true)
+    expect(res.body.data.length).toBeGreaterThanOrEqual(1)
+    expect(res.body.data.every((c) => c.dogsAllowedBool === true)).toBe(true)
+    expect(res.body.data[0].score).not.toBeNull()
   })
 })
