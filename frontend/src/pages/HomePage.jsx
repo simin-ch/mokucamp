@@ -33,6 +33,8 @@ export default function HomePage() {
 
   // Campsite to focus/fly-to when navigating back from profile
   const [focusCampsite, setFocusCampsite] = useState(null)
+  /** Bumped on search/reset so the map clears nearby hiking tracks. */
+  const [mapSearchEpoch, setMapSearchEpoch] = useState(0)
 
   useEffect(() => {
     const { focusCampsiteId } = location.state ?? {}
@@ -59,6 +61,7 @@ export default function HomePage() {
     e.preventDefault()
     const next = { ...form, offset: '0' }
     setForm(next)
+    setMapSearchEpoch((n) => n + 1)
     fetchCampsites(next, geocode.selectedPlace)
     recommend.fetchRecommendations(next, geocode.selectedPlace)
     setActiveTab('map')
@@ -69,6 +72,7 @@ export default function HomePage() {
     setResult(null)
     setError(null)
     setMapResult(null)
+    setMapSearchEpoch((n) => n + 1)
     recommend.clearResult()
     geocode.clearLocation()
   }
@@ -83,7 +87,7 @@ export default function HomePage() {
       {/* Header */}
       <header className="relative z-[1001] shrink-0 border-b border-stone-200/80 bg-white/85 backdrop-blur">
         <div className="flex items-center justify-between px-5 py-3.5">
-          <h1 className="text-base font-semibold tracking-tight">Mokucamp · Find Campsites</h1>
+          <h1 className="text-lg font-semibold tracking-tight sm:text-xl">MōkuCamp · Find Campsites in New Zealand</h1>
           <div className="flex items-center gap-2">
             {/* Auth button */}
             {user ? (
@@ -223,6 +227,7 @@ export default function HomePage() {
               form={form}
               setForm={setForm}
               loading={loading}
+              searchResult={result}
               onSubmit={handleSubmit}
               onReset={handleReset}
             />
@@ -244,12 +249,31 @@ export default function HomePage() {
               shortlistItems={shortlist.items}
               tripDate={form.date}
               focusCampsite={focusCampsite}
+              mapSearchEpoch={mapSearchEpoch}
               onFocusConsumed={() => setFocusCampsite(null)}
               {...shortlistProps}
             />
           )}
         </div>
       </div>
+
+      <footer className="shrink-0 border-t border-stone-200/80 bg-white/85 px-5 py-2.5 text-center text-xs text-stone-500 backdrop-blur">
+        <p className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
+          <span>© {new Date().getFullYear()} MōkuCamp · Find campsites in New Zealand</span>
+          <span className="text-stone-300" aria-hidden>
+            ·
+          </span>
+          <span>
+            Contact:{' '}
+            <a
+              href="mailto:simincheng6@gmail.com"
+              className="font-medium text-emerald-700 underline-offset-2 hover:underline"
+            >
+              simincheng6@gmail.com
+            </a>
+          </span>
+        </p>
+      </footer>
 
       <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} />
     </div>

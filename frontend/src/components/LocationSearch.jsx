@@ -1,3 +1,5 @@
+import { SEARCH_FIELD_CONTROL, SEARCH_FIELD_LABEL_SPACED } from './searchFormStyles'
+
 const RADIUS_OPTIONS = ['25', '50', '100', '200', '300']
 
 export default function LocationSearch({
@@ -17,20 +19,21 @@ export default function LocationSearch({
 }) {
   return (
     <div>
-      <span className="mb-2 block text-xs font-medium uppercase tracking-wide text-stone-500">
+      <label htmlFor="location-search" className={SEARCH_FIELD_LABEL_SPACED}>
         Location
-      </span>
+      </label>
 
       {/* Input with inline clear button and dropdown */}
       <div className="relative" ref={inputRef}>
         <input
+          id="location-search"
           type="text"
           value={locationInput}
           onChange={handleLocationChange}
           onFocus={() => !selectedPlace && suggestions.length > 0 && setShowSuggestions(true)}
           onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
           placeholder="Type at least 3 characters…"
-          className="w-full rounded-lg border border-stone-200/90 bg-white/90 px-3 py-2 pr-20 text-sm outline-none backdrop-blur-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
+          className={`${SEARCH_FIELD_CONTROL} pr-20`}
         />
         {geocodeLoading && (
           <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-stone-400">
@@ -52,7 +55,7 @@ export default function LocationSearch({
               <li
                 key={i}
                 onMouseDown={() => selectSuggestion(s)}
-                className="cursor-pointer truncate px-3 py-2 text-sm hover:bg-white/70"
+                className="cursor-pointer truncate px-3 py-2 text-sm text-stone-900 hover:bg-stone-50"
                 title={s.displayName}
               >
                 {s.displayName}
@@ -69,7 +72,7 @@ export default function LocationSearch({
       {/* Radius pills — only visible once a place is selected */}
       {selectedPlace && (
         <div className="mt-3 flex items-center gap-3">
-          <span className="shrink-0 text-xs font-medium text-stone-500">Radius</span>
+          <span className="shrink-0 text-sm font-medium uppercase text-stone-700">Radius</span>
           <div className="flex flex-wrap gap-1.5">
             {RADIUS_OPTIONS.map((km) => (
               <button

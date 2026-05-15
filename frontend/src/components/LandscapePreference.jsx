@@ -1,6 +1,32 @@
+import { useEffect, useRef, useState } from 'react'
 import { LANDSCAPE_OPTIONS } from '../utils/queryString'
+import {
+  SEARCH_DROPDOWN_OPTION,
+  SEARCH_DROPDOWN_PANEL,
+  SEARCH_FIELD_CONTROL,
+  SEARCH_FIELD_LABEL_SPACED,
+} from './searchFormStyles'
+
+function summaryLabel(selected) {
+  if (selected.length === 0) return 'Any landscape'
+  if (selected.length === 1) {
+    return LANDSCAPE_OPTIONS.find((o) => o.value === selected[0])?.label ?? selected[0]
+  }
+  return `${selected.length} landscapes selected`
+}
 
 export default function LandscapePreference({ selected, onChange }) {
+  const [open, setOpen] = useState(false)
+  const rootRef = useRef(null)
+
+  useEffect(() => {
+    function onPointerDown(e) {
+      if (rootRef.current && !rootRef.current.contains(e.target)) setOpen(false)
+    }
+    document.addEventListener('pointerdown', onPointerDown)
+    return () => document.removeEventListener('pointerdown', onPointerDown)
+  }, [])
+
   function toggle(value) {
     const next = selected.includes(value)
       ? selected.filter((v) => v !== value)
@@ -9,32 +35,54 @@ export default function LandscapePreference({ selected, onChange }) {
   }
 
   return (
-    <div>
-      <span className="mb-2 block text-xs font-medium uppercase tracking-wide text-stone-500">
-        Landscape preference
-      </span>
-      <div className="flex flex-wrap gap-2">
-        {LANDSCAPE_OPTIONS.map(({ value, label }) => {
-          const active = selected.includes(value)
-          return (
-            <button
-              key={value}
-              type="button"
-              onClick={() => toggle(value)}
-              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                active
-                  ? 'bg-emerald-600 text-white'
-                  : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
-              }`}
-            >
-              {label}
-            </button>
-          )
-        })}
-      </div>
-      {selected.length === 0 && (
-        <p className="mt-1.5 text-xs text-stone-400">No preference — all landscapes included</p>
+    <div className="relative max-w-xs" ref={rootRef}>
+      <label
+        id="landscape-select-label"
+        className={SEARCH_FIELD_LABEL_SPACED}
+      >
+        Landscape
+      </label>
+      <button
+        type="button"
+        id="landscape-select"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-labelledby="landscape-select-label landscape-select"
+        onClick={() => setOpen((v) => !v)}
+        className={`${SEARCH_FIELD_CONTROL} flex items-center justify-between text-left`}
+      >
+        <span>{summaryLabel(selected)}</span>
+        <span className="ml-2 text-stone-400" aria-hidden>
+          ▾
+        </span>
+      </button>
+
+      {open && (
+        <ul
+          role="listbox"
+          aria-multiselectable="true"
+          aria-labelledby="landscape-select-label"
+          className={SEARCH_DROPDOWN_PANEL}
+        >
+          {LANDSCAPE_OPTIONS.map(({ value, label }) => {
+            const checked = selected.includes(value)
+            return (
+              <li key={value} role="option" aria-selected={checked}>
+                <label className={SEARCH_DROPDOWN_OPTION}>
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => toggle(value)}
+                    className="h-4 w-4 rounded border-stone-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <span>{label}</span>
+                </label>
+              </li>
+            )
+          })}
+        </ul>
       )}
+
     </div>
   )
 }

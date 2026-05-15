@@ -1,7 +1,5 @@
 export const PAGE_SIZE = 50
 
-export const emptyBool = ''
-
 export function formatLocalDate(d) {
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')
@@ -27,22 +25,48 @@ export const LANDSCAPE_OPTIONS = [
   { value: 'Rivers and lakes', label: 'Rivers & Lakes' },
 ]
 
+export const FACILITY_OPTIONS = [
+  { value: 'dogsAllowedBool', label: 'Dogs' },
+  { value: 'hasToilets', label: 'Toilets' },
+  { value: 'hasWater', label: 'Water' },
+  { value: 'hasPower', label: 'Power' },
+]
+
+/** Values must match DOC `activities` field tokens exactly. */
+export const ACTIVITY_OPTIONS = [
+  { value: 'Bird and wildlife watching', label: 'Bird & wildlife watching' },
+  { value: 'Boating', label: 'Boating' },
+  { value: 'Camping', label: 'Camping' },
+  { value: 'Caving', label: 'Caving' },
+  { value: 'Climbing', label: 'Climbing' },
+  { value: 'Diving and snorkelling', label: 'Diving & snorkelling' },
+  { value: 'Fishing', label: 'Fishing' },
+  { value: 'Four wheel driving', label: 'Four wheel driving' },
+  { value: 'Horse riding', label: 'Horse riding' },
+  { value: 'Hunting', label: 'Hunting' },
+  { value: 'Kayaking and canoeing', label: 'Kayaking & canoeing' },
+  { value: 'Mountain biking', label: 'Mountain biking' },
+  { value: 'Picnicking', label: 'Picnicking' },
+  { value: 'Rafting', label: 'Rafting' },
+  { value: 'Scenic driving', label: 'Scenic driving' },
+  { value: 'Skiing and ski touring', label: 'Skiing & ski touring' },
+  { value: 'Swimming', label: 'Swimming' },
+  { value: 'Walking and tramping', label: 'Walking & tramping' },
+]
+
 export const initialForm = {
-  dogsAllowedBool: emptyBool,
-  hasToilets: emptyBool,
-  hasWater: emptyBool,
-  hasPower: emptyBool,
+  facilities: [],
   landscapes: [],
+  activities: [],
   offset: '0',
   radiusKm: '100',
   date: defaultTripDate(),
 }
 
 function appendFacilityParams(p, form) {
-  if (form.dogsAllowedBool) p.set('dogsAllowedBool', form.dogsAllowedBool)
-  if (form.hasToilets) p.set('hasToilets', form.hasToilets)
-  if (form.hasWater) p.set('hasWater', form.hasWater)
-  if (form.hasPower) p.set('hasPower', form.hasPower)
+  for (const key of form.facilities ?? []) {
+    p.set(key, 'true')
+  }
 }
 
 export function buildQueryString(form, place) {
@@ -59,6 +83,7 @@ export function buildQueryString(form, place) {
   }
   if (form.date) p.set('date', form.date)
   if (form.landscapes?.length) p.set('landscape', form.landscapes.join(','))
+  if (form.activities?.length) p.set('activity', form.activities.join(','))
   return p.toString()
 }
 
@@ -74,6 +99,7 @@ export function buildMapQueryString(form, place) {
   }
   if (form.date) p.set('date', form.date)
   if (form.landscapes?.length) p.set('landscape', form.landscapes.join(','))
+  if (form.activities?.length) p.set('activity', form.activities.join(','))
   return p.toString()
 }
 
@@ -88,6 +114,7 @@ export function buildRecommendQueryString(form, place) {
   }
   if (form.date) p.set('date', form.date)
   if (form.landscapes?.length) p.set('landscapes', form.landscapes.join(','))
+  if (form.activities?.length) p.set('activities', form.activities.join(','))
   p.set('limit', '5')
   return p.toString()
 }

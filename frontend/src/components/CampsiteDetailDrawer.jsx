@@ -1,5 +1,10 @@
 import { useEffect, useState } from 'react'
 import { formatTripDateLabel } from '../utils/formatTripDate'
+import {
+  hasWalkingAndTramping,
+  NEARBY_TRACKS_LIMIT,
+  NEARBY_TRACKS_RADIUS_KM,
+} from '../utils/nearbyTracks'
 import { summarizeForecast } from '../utils/weatherSummary'
 import ReviewsTab from './ReviewsTab'
 
@@ -56,6 +61,7 @@ function dedupeToiletFacilities(items) {
 }
 
 const MERGED_WATER_TAP_BOIL = 'Water from tap - not treated, boil before use'
+const MERGED_WATER_TAP_TREATED_SUITABLE = 'Water from tap - treated, suitable for drinking'
 
 /** Join adjacent tap-water + boil note into one facility line. */
 function mergeWaterTapBoilAdjacent(items) {
@@ -70,6 +76,13 @@ function mergeWaterTapBoilAdjacent(items) {
       norm(next) === 'boil before use'
     ) {
       out.push(MERGED_WATER_TAP_BOIL)
+      i++
+    } else if (
+      next !== undefined &&
+      norm(cur) === 'water from tap - treated' &&
+      norm(next) === 'suitable for drinking'
+    ) {
+      out.push(MERGED_WATER_TAP_TREATED_SUITABLE)
       i++
     } else {
       out.push(cur)
@@ -110,7 +123,16 @@ const TABS = [
   { id: 'reviews', label: 'Reviews' },
 ]
 
-export default function CampsiteDetailDrawer({ campsite: c, tripDate, onClose, onToggleShortlist, isShortlisted }) {
+export default function CampsiteDetailDrawer({
+  campsite: c,
+  tripDate,
+  onClose,
+  onToggleShortlist,
+  isShortlisted,
+  nearbyTrails,
+  onShowNearbyTrails,
+  onHideNearbyTrails,
+}) {
   const open = Boolean(c)
   const shortlisted = c ? isShortlisted?.(c.id) : false
 
@@ -164,6 +186,13 @@ export default function CampsiteDetailDrawer({ campsite: c, tripDate, onClose, o
   const activityItems = parseList(c?.activities)
   const facilityItems = mergeWaterTapBoilAdjacent(dedupeToiletFacilities(parseList(c?.facilities)))
   const dogsText = stripHtml(c?.dogsAllowed)
+  const showNearbyTracks = hasWalkingAndTramping(c?.activities)
+  const trailsForCampsite = nearbyTrails?.campsiteId === c?.id ? nearbyTrails : null
+  const trailsLoading = trailsForCampsite?.loading ?? false
+  const trailsActive =
+    trailsForCampsite &&
+    !trailsLoading &&
+    (trailsForCampsite.trails?.length > 0 || trailsForCampsite.empty)
 
   return (
     <>
@@ -336,6 +365,68 @@ export default function CampsiteDetailDrawer({ campsite: c, tripDate, onClose, o
                           </span>
                         ))}
                       </div>
+
+                      {showNearbyTracks && onShowNearbyTrails && (
+                        <div className="mt-4 border-t border-teal-100 pt-4">
+                          <p className="mb-2 text-xs text-stone-500">
+                            DOC tracks within {NEARBY_TRACKS_RADIUS_KM} km
+                          </p>
+                          {trailsActive ? (
+                            <button
+                              type="button"
+                              onClick={() => onHideNearbyTrails?.()}
+                              className="w-full rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900 transition-colors hover:bg-amber-100"
+                            >
+                              Hide tracks on map
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => onShowNearbyTrails(c)}
+                              disabled={trailsLoading}
+                              className="w-full rounded-lg border border-amber-400 bg-white px-3 py-2 text-sm font-semibold text-amber-800 transition-colors hover:bg-amber-50 disabled:cursor-wait disabled:opacity-60"
+                            >
+                              {trailsLoading ? 'Loading tracks…' : 'Show nearby hiking tracks'}
+                            </button>
+                          )}
+                          {trailsForCampsite?.error && (
+                            <p className="mt-2 text-xs text-red-600">{trailsForCampsite.error}</p>
+                          )}
+                          {trailsForCampsite?.empty && !trailsLoading && (
+                            <p className="mt-2 text-xs text-stone-500">
+                              No DOC tracks within {NEARBY_TRACKS_RADIUS_KM} km.
+                            </p>
+                          )}
+                          {trailsForCampsite?.trails?.length > 0 && (
+                            <ul className="mt-3 space-y-2">
+                              {trailsForCampsite.trails.map((track) => (
+                                <li
+                                  key={track.objectId ?? track.name}
+                                  className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm"
+                                >
+                                  <p className="font-medium text-stone-900">{track.name}</p>
+                                  <p className="mt-0.5 text-xs text-stone-500">
+                                    {[track.difficulty, track.completionTime]
+                                      .filter(Boolean)
+                                      .join(' · ')}
+                                    {track.distanceKm != null && ` · ~${track.distanceKm} km`}
+                                  </p>
+                                  {track.webPage && (
+                                    <a
+                                      href={track.webPage}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="mt-1 inline-block text-xs font-medium text-emerald-700 hover:underline"
+                                    >
+                                      DOC track page →
+                                    </a>
+                                  )}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      )}
                     </Section>
                   )}
 

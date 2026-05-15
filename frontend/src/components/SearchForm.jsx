@@ -1,16 +1,19 @@
+import ActivityPreference from './ActivityPreference'
 import FacilityFilters from './FacilityFilters'
 import LandscapePreference from './LandscapePreference'
 import LocationSearch from './LocationSearch'
+import { SEARCH_FIELD_CONTROL_MT, SEARCH_FIELD_LABEL } from './searchFormStyles'
 import { formatLocalDate, maxTripDate } from '../utils/queryString'
 
-export default function SearchForm({ geocode, form, setForm, loading, onSubmit, onReset }) {
+export default function SearchForm({ geocode, form, setForm, loading, onSubmit, onReset, searchResult }) {
+  const showNoResults = searchResult != null && searchResult.total === 0
   const minDate = formatLocalDate(new Date())
   const maxDate = maxTripDate()
 
   return (
     <form onSubmit={onSubmit} className="space-y-5">
       <div>
-        <label htmlFor="trip-date" className="block text-sm font-medium text-stone-700">
+        <label htmlFor="trip-date" className={SEARCH_FIELD_LABEL}>
           Trip date
         </label>
         <input
@@ -22,7 +25,7 @@ export default function SearchForm({ geocode, form, setForm, loading, onSubmit, 
           min={minDate}
           max={maxDate}
           onChange={(e) => setForm((s) => ({ ...s, date: e.target.value }))}
-          className="mt-1.5 w-full max-w-xs rounded-lg border border-stone-200/90 bg-white/90 px-3 py-2 text-sm text-stone-900 shadow-sm backdrop-blur-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+          className={`${SEARCH_FIELD_CONTROL_MT} max-w-xs`}
         />
         <p className="mt-1 text-xs text-stone-500">
           Weather forecast is loaded for the selected day (today through the next 10 days).
@@ -36,14 +39,28 @@ export default function SearchForm({ geocode, form, setForm, loading, onSubmit, 
       />
 
       <FacilityFilters
-        form={form}
-        onChange={(key, val) => setForm((s) => ({ ...s, [key]: val }))}
+        selected={form.facilities ?? []}
+        onChange={(val) => setForm((s) => ({ ...s, facilities: val }))}
       />
 
       <LandscapePreference
         selected={form.landscapes ?? []}
         onChange={(val) => setForm((s) => ({ ...s, landscapes: val }))}
       />
+
+      <ActivityPreference
+        selected={form.activities ?? []}
+        onChange={(val) => setForm((s) => ({ ...s, activities: val }))}
+      />
+
+      {showNoResults && (
+        <p
+          role="status"
+          className="rounded-lg border border-amber-200/90 bg-amber-50/90 px-3 py-2.5 text-sm text-amber-900"
+        >
+          No campsites match your search — try adjusting your filters.
+        </p>
+      )}
 
       <div className="flex flex-wrap items-center gap-3 pt-1">
         <button

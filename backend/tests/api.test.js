@@ -27,6 +27,7 @@ beforeAll(async () => {
         region: 'Auckland',
         campsiteCategory: 'Scenic',
         landscape: 'Coastal,Beach',
+        activities: 'Walking and tramping,Fishing',
         dogsAllowedBool: true,
         hasToilets: true,
         hasWater: true,
@@ -46,6 +47,19 @@ beforeAll(async () => {
         hasPower: false,
         lat: -43.5,
         lon: 170.1,
+      },
+      {
+        ...baseCampsite,
+        sourceId: 'seed-3',
+        name: 'Forest Coast Camp',
+        place: 'Coromandel',
+        region: 'Waikato',
+        campsiteCategory: 'Scenic',
+        landscape: 'Coastal,Forest',
+        dogsAllowedBool: true,
+        hasToilets: true,
+        hasWater: true,
+        hasPower: false,
       },
     ],
   })
@@ -157,6 +171,113 @@ describe('GET /api/campsites', () => {
     expect(res.body.data.every((c) => String(c.landscape || '').toLowerCase().includes('alpine'))).toBe(
       true,
     )
+  })
+
+  it('requires all landscape values when multiple are selected', async () => {
+    const coastalOnly = await request(app)
+      .get('/api/campsites')
+      .query({ landscape: 'Coastal', region: 'Auckland' })
+      .expect(200)
+    expect(coastalOnly.body.landscapeNotFound).toBe(false)
+    expect(coastalOnly.body.data.some((c) => c.name === 'Test Bay DOC')).toBe(true)
+
+    const coastalAndForest = await request(app)
+      .get('/api/campsites')
+      .query({ landscape: 'Coastal,Forest', region: 'Waikato' })
+      .expect(200)
+    expect(coastalAndForest.body.landscapeNotFound).toBe(false)
+    expect(coastalAndForest.body.data.some((c) => c.name === 'Forest Coast Camp')).toBe(true)
+    expect(coastalAndForest.body.data.some((c) => c.name === 'Test Bay DOC')).toBe(false)
+
+    const coastalAndBeach = await request(app)
+      .get('/api/campsites')
+      .query({ landscape: 'Coastal,Beach', region: 'Auckland' })
+      .expect(200)
+    expect(coastalAndBeach.body.landscapeNotFound).toBe(false)
+    expect(coastalAndBeach.body.data.some((c) => c.name === 'Test Bay DOC')).toBe(true)
+    expect(coastalAndBeach.body.data.some((c) => c.name === 'Forest Coast Camp')).toBe(false)
+  })
+
+  it('requires all activity values when multiple are selected', async () => {
+    const walkingOnly = await request(app)
+      .get('/api/campsites')
+      .query({ activity: 'Walking and tramping', region: 'Auckland' })
+      .expect(200)
+    expect(walkingOnly.body.data.some((c) => c.name === 'Test Bay DOC')).toBe(true)
+
+    const walkingAndBiking = await request(app)
+      .get('/api/campsites')
+      .query({ activity: 'Walking and tramping,Mountain biking', region: 'Auckland' })
+      .expect(200)
+    expect(walkingAndBiking.body.data.some((c) => c.name === 'Test Bay DOC')).toBe(false)
+
+    const walkingAndFishing = await request(app)
+      .get('/api/campsites')
+      .query({ activity: 'Walking and tramping,Fishing', region: 'Auckland' })
+      .expect(200)
+    expect(walkingAndFishing.body.data.some((c) => c.name === 'Test Bay DOC')).toBe(true)
+  })
+
+  it('returns empty results when landscape filter has no matches', async () => {
+    const res = await request(app)
+      .get('/api/campsites')
+      .query({ landscape: 'Coastal,Forest', region: 'Auckland' })
+      .expect(200)
+
+    expect(res.body).toMatchObject({ total: 0, landscapeNotFound: true })
+    expect(res.body.data).toHaveLength(0)
+  })
+})
+
+describe('GET /api/campsites/:id/nearby-tracks', () => {
+  it('returns nearby DOC tracks (default 3 km, max 5)', async () => {
+    const campsite = await prisma.campsite.findFirst({
+      where: { dataset: 'test', name: 'Test Bay DOC' },
+    })
+
+    axios.get.mockResolvedValueOnce({
+      data: {
+        features: [
+          {
+            type: 'Feature',
+            properties: {
+              OBJECTID: 42,
+              name: 'Coastal Walk',
+              difficulty: 'Easy',
+              completionTime: '2 hr',
+              introduction: 'A scenic walk.',
+              walkingAndTrampingWebPage: 'https://www.doc.govt.nz/track',
+            },
+            geometry: {
+              type: 'LineString',
+              coordinates: [
+                [174.76, -36.85],
+                [174.77, -36.86],
+              ],
+            },
+          },
+        ],
+      },
+    })
+
+    const res = await request(app)
+      .get(`/api/campsites/${campsite.id}/nearby-tracks`)
+      .expect(200)
+
+    expect(res.body).toMatchObject({ radiusKm: 3, limit: 5 })
+    expect(res.body.data).toHaveLength(1)
+    expect(res.body.data[0]).toMatchObject({
+      objectId: 42,
+      name: 'Coastal Walk',
+      difficulty: 'Easy',
+      webPage: 'https://www.doc.govt.nz/track',
+    })
+    expect(res.body.data[0].geometry.type).toBe('LineString')
+    expect(axios.get).toHaveBeenCalledTimes(1)
+  })
+
+  it('returns 404 when campsite does not exist', async () => {
+    await request(app).get('/api/campsites/999999/nearby-tracks').expect(404)
   })
 })
 

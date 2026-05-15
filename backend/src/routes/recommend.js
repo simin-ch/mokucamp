@@ -4,6 +4,7 @@ const router = express.Router()
 const { PrismaClient } = require('@prisma/client')
 const { fetchWeather } = require('../utils/weather')
 const { withThumbnail } = require('../utils/campsite')
+const { campsiteHasAllLandscapes, campsiteHasAllActivities } = require('../utils/landscape')
 
 const prisma = new PrismaClient()
 
@@ -68,16 +69,14 @@ function scoreWeather(weather) {
 }
 
 /**
- * Landscape score: 1.0 if campsite matches any preferred landscape type,
- * 0.0 if campsite has a landscape but none match, null when user expressed
+ * Landscape score: 1.0 if campsite includes every preferred landscape type,
+ * 0.0 if campsite has a landscape but not all match, null when user expressed
  * no preference. Campsites with no landscape data score 0.3 (slight penalty).
  */
 function scoreLandscape(campsiteLandscape, preferredLandscapes) {
   if (!preferredLandscapes || preferredLandscapes.length === 0) return null
   if (!campsiteLandscape) return 0.3
-  const cs = campsiteLandscape.toLowerCase()
-  const matched = preferredLandscapes.some((p) => cs.includes(p.toLowerCase()))
-  return matched ? 1.0 : 0.0
+  return campsiteHasAllLandscapes(campsiteLandscape, preferredLandscapes) ? 1.0 : 0.0
 }
 
 const FACILITY_KEYS = ['dogsAllowedBool', 'hasToilets', 'hasWater', 'hasPower']
@@ -142,8 +141,8 @@ function computeScore(campsite, { distanceKm, radiusKm, weather, landscapePrefs,
  * Query params:
  *   - lat, lon, radiusKm  location context (all required for distance scoring)
  *   - date                YYYY-MM-DD; with radius, fetches Open-Meteo only for campsites inside radius (ranking)
- *   - landscapes          comma-separated preferred landscape types
- *                         e.g. "Coastal,Alpine"
+ *   - landscapes          comma-separated landscape types; campsite must include all
+ *   - activities          comma-separated activities; campsite must include all
  *   - dogsAllowedBool, hasToilets, hasWater, hasPower
  *                         "true" = user requires this facility
  *   - limit               max ranked results when lat/lon/radius set (default 5, cap 50)
@@ -159,6 +158,7 @@ router.get('/', async (req, res) => {
       radiusKm,
       date: dateQuery,
       landscapes,
+      activities,
       dogsAllowedBool,
       hasToilets,
       hasWater,
@@ -178,6 +178,13 @@ router.get('/', async (req, res) => {
 
     const landscapePrefs = landscapes
       ? String(landscapes)
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : []
+
+    const activityPrefs = activities
+      ? String(activities)
           .split(',')
           .map((s) => s.trim())
           .filter(Boolean)
@@ -215,18 +222,27 @@ router.get('/', async (req, res) => {
 
     candidates = hardFilterByFacilities(candidates, facilityPrefs)
 
-    // When landscape preference is set, hard-filter to matching campsites only.
+    // Hard-filter by landscape / activity preferences (must match all selected values).
     let landscapeNotFound = false
     if (landscapePrefs.length > 0) {
-      const matched = candidates.filter((c) => {
-        if (!c.landscape) return false
-        const cs = c.landscape.toLowerCase()
-        return landscapePrefs.some((p) => cs.includes(p.toLowerCase()))
-      })
+      const matched = candidates.filter((c) =>
+        campsiteHasAllLandscapes(c.landscape, landscapePrefs),
+      )
       if (matched.length > 0) {
         candidates = matched
       } else {
         landscapeNotFound = true
+        candidates = []
+      }
+    }
+    if (activityPrefs.length > 0 && candidates.length > 0) {
+      const matched = candidates.filter((c) =>
+        campsiteHasAllActivities(c.activities, activityPrefs),
+      )
+      if (matched.length > 0) {
+        candidates = matched
+      } else {
+        candidates = []
       }
     }
 

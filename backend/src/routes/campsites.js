@@ -3,6 +3,12 @@ const express = require('express')
 const router = express.Router()
 const { PrismaClient } = require('@prisma/client')
 const { withThumbnail } = require('../utils/campsite')
+const {
+  fetchNearbyTracks,
+  DEFAULT_RADIUS_KM,
+  DEFAULT_LIMIT: DEFAULT_TRACKS_LIMIT,
+} = require('../services/docTracks')
+const { campsiteHasAllLandscapes, campsiteHasAllActivities } = require('../utils/landscape')
 
 const prisma = new PrismaClient()
 
@@ -42,7 +48,8 @@ function haversineKm(lat1, lon1, lat2, lon2) {
  *   - lat: centre latitude for distance filtering (WGS84)
  *   - lon: centre longitude for distance filtering (WGS84)
  *   - radiusKm: include only campsites within this radius; results sorted by distance
- *   - landscape: filter to campsites whose landscape field contains this value (e.g. "Coastal")
+ *   - landscape: comma-separated landscape types; campsite must include every value (e.g. "Coastal,Forest")
+ *   - activity: comma-separated activities; campsite must include every value (e.g. "Walking and tramping,Fishing")
  */
 router.get('/', async (req, res) => {
   try {
@@ -54,6 +61,7 @@ router.get('/', async (req, res) => {
       hasWater,
       hasPower,
       landscape,
+      activity,
       q,
       limit,
       offset,
@@ -102,16 +110,35 @@ router.get('/', async (req, res) => {
       : []
     const landscapeFilter = landscapeValues.length > 0 ? landscapeValues : null
 
-    // Full where clause: add landscape as AND condition so it doesn't conflict with q OR
-    const where = landscapeFilter
-      ? {
-          ...whereBase,
-          AND: [
-            ...(whereBase.AND ?? []),
-            { OR: landscapeFilter.map((v) => ({ landscape: { contains: v } })) },
-          ],
-        }
-      : whereBase
+    const activityValues = activity
+      ? String(activity).split(',').map((s) => s.trim()).filter(Boolean)
+      : []
+    const activityFilter = activityValues.length > 0 ? activityValues : null
+
+    const tagPrefilters = [
+      ...(landscapeFilter?.map((v) => ({ landscape: { contains: v } })) ?? []),
+      ...(activityFilter?.map((v) => ({ activities: { contains: v } })) ?? []),
+    ]
+
+    // Prisma prefilter (AND); exact token match applied in JS below.
+    const where =
+      tagPrefilters.length > 0
+        ? {
+            ...whereBase,
+            AND: [...(whereBase.AND ?? []), ...tagPrefilters],
+          }
+        : whereBase
+
+    const applyTagFilters = (rows) => {
+      let filtered = rows
+      if (landscapeFilter) {
+        filtered = filtered.filter((c) => campsiteHasAllLandscapes(c.landscape, landscapeFilter))
+      }
+      if (activityFilter) {
+        filtered = filtered.filter((c) => campsiteHasAllActivities(c.activities, activityFilter))
+      }
+      return filtered
+    }
 
     if (useDistance) {
       // Fetch all candidates matching other filters, then apply Haversine in JS.
@@ -126,18 +153,10 @@ router.get('/', async (req, res) => {
           .filter((c) => c.distanceKm <= radius)
           .sort((a, b) => a.distanceKm - b.distanceKm)
 
-      let filtered = applyRadius(
-        await prisma.campsite.findMany({ where, orderBy: { id: 'asc' } }),
+      let filtered = applyTagFilters(
+        applyRadius(await prisma.campsite.findMany({ where, orderBy: { id: 'asc' } })),
       )
-      let landscapeNotFound = false
-
-      // No matching landscape within radius → fall back to all landscapes and notify
-      if (landscapeFilter && filtered.length === 0) {
-        filtered = applyRadius(
-          await prisma.campsite.findMany({ where: whereBase, orderBy: { id: 'asc' } }),
-        )
-        landscapeNotFound = true
-      }
+      const landscapeNotFound = Boolean(landscapeFilter && filtered.length === 0)
 
       const page = filtered.slice(skip, skip + take)
       const data = page.map(withThumbnail)
@@ -149,20 +168,12 @@ router.get('/', async (req, res) => {
       })
     }
 
-    let [rows, total] = await Promise.all([
-      prisma.campsite.findMany({ where, take, skip, orderBy: { id: 'asc' } }),
-      prisma.campsite.count({ where }),
-    ])
-    let landscapeNotFound = false
+    const allRows = await prisma.campsite.findMany({ where, orderBy: { id: 'asc' } })
+    const filtered = applyTagFilters(allRows)
+    const landscapeNotFound = Boolean(landscapeFilter && filtered.length === 0)
 
-    // No matching landscape → fall back to all landscapes and notify
-    if (landscapeFilter && total === 0) {
-      ;[rows, total] = await Promise.all([
-        prisma.campsite.findMany({ where: whereBase, take, skip, orderBy: { id: 'asc' } }),
-        prisma.campsite.count({ where: whereBase }),
-      ])
-      landscapeNotFound = true
-    }
+    const total = filtered.length
+    const rows = filtered.slice(skip, skip + take)
 
     const data = rows.map(withThumbnail)
 
@@ -171,6 +182,33 @@ router.get('/', async (req, res) => {
     // eslint-disable-next-line no-console
     console.error(err)
     res.status(500).json({ message: 'Failed to fetch campsites' })
+  }
+})
+
+/**
+ * GET /api/campsites/:id/nearby-tracks
+ * DOC walking/tramping routes within radiusKm of the campsite (default 15 km, max 5).
+ */
+router.get('/:id/nearby-tracks', async (req, res) => {
+  const id = parseInt(req.params.id, 10)
+  if (isNaN(id)) return res.status(400).json({ message: 'Invalid id' })
+
+  const radiusKm = parseFloat(req.query.radiusKm)
+  const limit = parseInt(req.query.limit, 10)
+
+  try {
+    const campsite = await prisma.campsite.findUnique({ where: { id } })
+    if (!campsite) return res.status(404).json({ message: 'Campsite not found' })
+
+    const result = await fetchNearbyTracks(campsite.lat, campsite.lon, {
+      radiusKm: !isNaN(radiusKm) ? radiusKm : DEFAULT_RADIUS_KM,
+      limit: !isNaN(limit) ? limit : DEFAULT_TRACKS_LIMIT,
+    })
+
+    res.json(result)
+  } catch (err) {
+    console.error(err)
+    res.status(502).json({ message: 'Failed to fetch nearby tracks' })
   }
 })
 

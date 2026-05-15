@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { FACILITY_OPTIONS } from '../utils/queryString'
+import { ACTIVITY_OPTIONS } from '../utils/queryString'
 import {
   SEARCH_DROPDOWN_OPTION,
   SEARCH_DROPDOWN_PANEL,
@@ -8,14 +8,14 @@ import {
 } from './searchFormStyles'
 
 function summaryLabel(selected) {
-  if (selected.length === 0) return 'Any facilities'
+  if (selected.length === 0) return 'Any activities'
   if (selected.length === 1) {
-    return FACILITY_OPTIONS.find((o) => o.value === selected[0])?.label ?? selected[0]
+    return ACTIVITY_OPTIONS.find((o) => o.value === selected[0])?.label ?? selected[0]
   }
-  return `${selected.length} facilities selected`
+  return `${selected.length} activities selected`
 }
 
-export default function FacilityFilters({ selected, onChange }) {
+export default function ActivityPreference({ selected, onChange }) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef(null)
 
@@ -37,17 +37,17 @@ export default function FacilityFilters({ selected, onChange }) {
   return (
     <div className="relative max-w-xs" ref={rootRef}>
       <label
-        id="facility-select-label"
+        id="activity-select-label"
         className={SEARCH_FIELD_LABEL_SPACED}
       >
-        Facilities
+        Activities
       </label>
       <button
         type="button"
-        id="facility-select"
+        id="activity-select"
         aria-haspopup="listbox"
         aria-expanded={open}
-        aria-labelledby="facility-select-label facility-select"
+        aria-labelledby="activity-select-label activity-select"
         onClick={() => setOpen((v) => !v)}
         className={`${SEARCH_FIELD_CONTROL} flex items-center justify-between text-left`}
       >
@@ -61,10 +61,10 @@ export default function FacilityFilters({ selected, onChange }) {
         <ul
           role="listbox"
           aria-multiselectable="true"
-          aria-labelledby="facility-select-label"
-          className={SEARCH_DROPDOWN_PANEL}
+          aria-labelledby="activity-select-label"
+          className={`${SEARCH_DROPDOWN_PANEL} max-h-52 overflow-y-auto`}
         >
-          {FACILITY_OPTIONS.map(({ value, label }) => {
+          {ACTIVITY_OPTIONS.map(({ value, label }) => {
             const checked = selected.includes(value)
             return (
               <li key={value} role="option" aria-selected={checked}>
