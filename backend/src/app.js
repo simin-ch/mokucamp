@@ -12,6 +12,11 @@ const reviewsRouter = require('./routes/reviews')
 
 const app = express()
 
+// Render (and similar) sit behind one reverse proxy — trust X-Forwarded-For for req.ip / rate limiting.
+if (process.env.NODE_ENV !== 'test') {
+  app.set('trust proxy', 1)
+}
+
 const defaultDevOrigins = ['http://localhost:5173', 'http://127.0.0.1:5173']
 const allowedOrigins = process.env.FRONTEND_URL
   ? process.env.FRONTEND_URL.split(',').map((s) => s.trim()).filter(Boolean)
