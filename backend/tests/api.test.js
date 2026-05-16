@@ -123,13 +123,52 @@ describe('GET /api/geocode', () => {
     ])
   })
 
-  it('returns 502 when upstream fails', async () => {
+  it('falls back to Photon when Nominatim fails', async () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
+    const infoSpy = jest.spyOn(console, 'info').mockImplementation(() => {})
+    axios.get
+      .mockRejectedValueOnce(new Error('network'))
+      .mockResolvedValueOnce({
+        data: {
+          features: [
+            {
+              geometry: { coordinates: [174.7756, -41.2866] },
+              properties: {
+                name: 'Wellington',
+                country: 'New Zealand',
+                countrycode: 'NZ',
+              },
+            },
+          ],
+        },
+      })
+
+    const res = await request(app).get('/api/geocode').query({ q: 'Wellington' }).expect(200)
+
+    expect(axios.get).toHaveBeenCalledTimes(2)
+    expect(axios.get).toHaveBeenNthCalledWith(
+      2,
+      'https://photon.komoot.io/api',
+      expect.objectContaining({
+        params: expect.objectContaining({ q: 'Wellington', bbox: '165,-48,179,-34' }),
+      }),
+    )
+    expect(res.body).toEqual([
+      { displayName: 'Wellington, New Zealand', lat: -41.2866, lon: 174.7756 },
+    ])
+    warnSpy.mockRestore()
+    infoSpy.mockRestore()
+  })
+
+  it('returns 502 when Nominatim and Photon both fail', async () => {
     const errSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
-    axios.get.mockRejectedValueOnce(new Error('network'))
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
+    axios.get.mockRejectedValueOnce(new Error('network')).mockRejectedValueOnce(new Error('network'))
 
     const res = await request(app).get('/api/geocode').query({ q: 'Auckland' }).expect(502)
     expect(res.body).toEqual({ message: 'Geocoding service unavailable' })
     errSpy.mockRestore()
+    warnSpy.mockRestore()
   })
 })
 
