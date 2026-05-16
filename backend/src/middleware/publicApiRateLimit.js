@@ -4,7 +4,7 @@ function skipInTest() {
   return process.env.NODE_ENV === 'test'
 }
 
-/** GET /api/geocode — proxy to Nominatim */
+/** GET /api/geocode — proxy to Photon */
 const geocodeLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 30,
