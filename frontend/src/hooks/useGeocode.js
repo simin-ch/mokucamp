@@ -34,7 +34,11 @@ export function useGeocode() {
         if (controller.signal.aborted) return
 
         if (!res.ok || data === null) {
-          setGeocodeError('Address search unavailable — check the backend is running.')
+          const serverMsg =
+            data && typeof data.message === 'string' && data.message.trim() ? data.message.trim() : null
+          setGeocodeError(
+            serverMsg ?? 'Address search unavailable — check the backend is running.',
+          )
           setSuggestions([])
           setShowSuggestions(false)
           return
@@ -63,7 +67,7 @@ export function useGeocode() {
       } finally {
         if (!controller.signal.aborted) setGeocodeLoading(false)
       }
-    }, 400)
+    }, 550)
 
     return () => {
       clearTimeout(timer)
