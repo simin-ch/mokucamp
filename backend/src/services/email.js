@@ -35,13 +35,29 @@ async function createTransporter() {
   })
 }
 
+/** Rebuild transporter when SMTP env changes (e.g. Render vars updated without full redeploy semantics). */
+function smtpConfigFingerprint() {
+  const host = process.env.EMAIL_HOST || ''
+  const user = process.env.EMAIL_USER || ''
+  const passLen = (process.env.EMAIL_PASS || '').length
+  return `${host}|${user}|${passLen}`
+}
+
 let _transporter = null
+let _transporterFingerprint = ''
 
 async function getTransporter() {
-  if (!_transporter) {
+  const fp = smtpConfigFingerprint()
+  if (!_transporter || _transporterFingerprint !== fp) {
     _transporter = await createTransporter()
+    _transporterFingerprint = fp
   }
   return _transporter
+}
+
+function recipientDomain(email) {
+  const i = String(email).indexOf('@')
+  return i === -1 ? '(invalid)' : String(email).slice(i)
 }
 
 /**
@@ -50,6 +66,13 @@ async function getTransporter() {
  * @param {string} token     - the raw verification token (stored hashed in DB)
  */
 async function sendVerificationEmail(toEmail, token) {
+  const mode = process.env.EMAIL_USER ? 'smtp' : 'ethereal'
+  console.info('[email] verification send start', {
+    toDomain: recipientDomain(toEmail),
+    mode,
+    host: process.env.EMAIL_HOST || '(ethereal)',
+  })
+
   const transporter = await getTransporter()
   const verifyUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email?token=${token}`
 
@@ -71,6 +94,12 @@ async function sendVerificationEmail(toEmail, token) {
     `,
   })
 
+  console.info('[email] verification sent', {
+    messageId: info.messageId,
+    accepted: info.accepted,
+    rejected: info.rejected,
+  })
+
   // In development, print the Ethereal preview URL to the console.
   if (nodemailer.getTestMessageUrl(info)) {
     console.log('📬  Preview email at:', nodemailer.getTestMessageUrl(info))
@@ -81,6 +110,13 @@ async function sendVerificationEmail(toEmail, token) {
  * Send a password-reset link.
  */
 async function sendPasswordResetEmail(toEmail, token) {
+  const mode = process.env.EMAIL_USER ? 'smtp' : 'ethereal'
+  console.info('[email] password-reset send start', {
+    toDomain: recipientDomain(toEmail),
+    mode,
+    host: process.env.EMAIL_HOST || '(ethereal)',
+  })
+
   const transporter = await getTransporter()
   const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${token}`
 
@@ -100,6 +136,12 @@ async function sendPasswordResetEmail(toEmail, token) {
         <p style="color:#6b7280;font-size:13px">Link expires in 1 hour. If you didn't request this, ignore this email.</p>
       </div>
     `,
+  })
+
+  console.info('[email] password-reset sent', {
+    messageId: info.messageId,
+    accepted: info.accepted,
+    rejected: info.rejected,
   })
 
   if (nodemailer.getTestMessageUrl(info)) {
