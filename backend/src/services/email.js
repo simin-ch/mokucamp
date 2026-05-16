@@ -28,6 +28,10 @@ async function createTransporter() {
     host: process.env.EMAIL_HOST,
     port: Number(process.env.EMAIL_PORT) || 587,
     secure: false,
+    requireTLS: true,
+    connectionTimeout: 20_000,
+    greetingTimeout: 15_000,
+    socketTimeout: 25_000,
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
@@ -76,7 +80,10 @@ async function sendVerificationEmail(toEmail, token) {
   const transporter = await getTransporter()
   const verifyUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email?token=${token}`
 
-  const info = await transporter.sendMail({
+  let info
+  try {
+    console.info('[email] verification calling sendMail')
+    info = await transporter.sendMail({
     from: process.env.EMAIL_FROM || 'Mokucamp <no-reply@mokucamp.app>',
     to: toEmail,
     subject: 'Confirm your Mokucamp account',
@@ -92,7 +99,17 @@ async function sendVerificationEmail(toEmail, token) {
         <p style="color:#6b7280;font-size:13px">Link expires in 24 hours. If you didn't sign up, you can safely ignore this email.</p>
       </div>
     `,
-  })
+    })
+  } catch (err) {
+    console.error('[email] verification sendMail failed', {
+      message: err.message,
+      code: err.code,
+      command: err.command,
+      response: err.response,
+      responseCode: err.responseCode,
+    })
+    throw err
+  }
 
   console.info('[email] verification sent', {
     messageId: info.messageId,
@@ -120,7 +137,10 @@ async function sendPasswordResetEmail(toEmail, token) {
   const transporter = await getTransporter()
   const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${token}`
 
-  const info = await transporter.sendMail({
+  let info
+  try {
+    console.info('[email] password-reset calling sendMail')
+    info = await transporter.sendMail({
     from: process.env.EMAIL_FROM || 'Mokucamp <no-reply@mokucamp.app>',
     to: toEmail,
     subject: 'Reset your Mokucamp password',
@@ -136,7 +156,17 @@ async function sendPasswordResetEmail(toEmail, token) {
         <p style="color:#6b7280;font-size:13px">Link expires in 1 hour. If you didn't request this, ignore this email.</p>
       </div>
     `,
-  })
+    })
+  } catch (err) {
+    console.error('[email] password-reset sendMail failed', {
+      message: err.message,
+      code: err.code,
+      command: err.command,
+      response: err.response,
+      responseCode: err.responseCode,
+    })
+    throw err
+  }
 
   console.info('[email] password-reset sent', {
     messageId: info.messageId,
