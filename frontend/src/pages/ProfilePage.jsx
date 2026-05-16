@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import StarRating from '../components/StarRating'
 import { useAuth } from '../hooks/useAuth'
 import { useMyReviews } from '../hooks/useMyReviews'
+import { apiUrl } from '../utils/apiUrl'
 
 const TOKEN_KEY = 'mokucamp_auth_token'
-const API = import.meta.env.VITE_API_URL ?? ''
 
 // ---------------------------------------------------------------------------
 // Edit Profile Tab
@@ -31,7 +31,7 @@ function EditProfileTab() {
     setProfileSaving(true)
     try {
       const token = localStorage.getItem(TOKEN_KEY)
-      const res = await fetch(`${API}/api/auth/profile`, {
+      const res = await fetch(apiUrl('/api/auth/profile'), {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -59,7 +59,7 @@ function EditProfileTab() {
     setPwSaving(true)
     try {
       const token = localStorage.getItem(TOKEN_KEY)
-      const res = await fetch(`${API}/api/auth/change-password`, {
+      const res = await fetch(apiUrl('/api/auth/change-password'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

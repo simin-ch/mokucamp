@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
+import { apiUrl } from '../utils/apiUrl'
 
 const TOKEN_KEY = 'mokucamp_auth_token'
-const API = import.meta.env.VITE_API_URL ?? ''
 
 export function useMyReviews() {
   const [reviews, setReviews] = useState([])
@@ -13,7 +13,7 @@ export function useMyReviews() {
     setError(null)
     try {
       const token = localStorage.getItem(TOKEN_KEY)
-      const res = await fetch(`${API}/api/reviews/mine`, {
+      const res = await fetch(apiUrl('/api/reviews/mine'), {
         headers: { Authorization: `Bearer ${token}` },
       })
       const data = await res.json()
@@ -32,7 +32,7 @@ export function useMyReviews() {
 
   const deleteReview = useCallback(async (campsiteId) => {
     const token = localStorage.getItem(TOKEN_KEY)
-    const res = await fetch(`${API}/api/reviews/${campsiteId}`, {
+    const res = await fetch(apiUrl(`/api/reviews/${campsiteId}`), {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
     })

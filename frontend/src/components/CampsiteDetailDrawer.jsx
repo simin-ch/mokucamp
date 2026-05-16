@@ -6,9 +6,8 @@ import {
   NEARBY_TRACKS_RADIUS_KM,
 } from '../utils/nearbyTracks'
 import { summarizeForecast } from '../utils/weatherSummary'
+import { apiUrl } from '../utils/apiUrl'
 import ReviewsTab from './ReviewsTab'
-
-const API_BASE = import.meta.env.VITE_API_URL ?? ''
 
 const ACCESS_ICONS = {
   'Car': '🚗',
@@ -131,7 +130,7 @@ function CampsiteForecastSection({ lat, lon, tripDate }) {
       lon: String(lon),
       date: tripDate,
     })
-    fetch(`${API_BASE}/api/forecast?${qs}`, { signal: ac.signal })
+    fetch(apiUrl(`/api/forecast?${qs}`), { signal: ac.signal })
       .then(async (res) => {
         const json = await res.json().catch(() => ({}))
         if (!res.ok) throw new Error(json.message || `HTTP ${res.status}`)

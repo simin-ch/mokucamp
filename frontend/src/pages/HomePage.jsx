@@ -10,9 +10,8 @@ import { useGeocode } from '../hooks/useGeocode'
 import { useMinWidthSm } from '../hooks/useMinWidthSm'
 import { useRecommend } from '../hooks/useRecommend'
 import { useShortlist } from '../hooks/useShortlist'
+import { apiUrl } from '../utils/apiUrl'
 import { defaultTripDate, initialForm } from '../utils/queryString'
-
-const API = import.meta.env.VITE_API_URL ?? ''
 
 export default function HomePage() {
   const { user, logout } = useAuth()
@@ -40,7 +39,7 @@ export default function HomePage() {
     const { focusCampsiteId } = location.state ?? {}
     if (!focusCampsiteId) return
 
-    fetch(`${API}/api/campsites/${focusCampsiteId}`)
+    fetch(apiUrl(`/api/campsites/${focusCampsiteId}`))
       .then((r) => r.ok ? r.json() : null)
       .then((campsite) => {
         if (campsite) {

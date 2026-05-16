@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { API, AuthContext, TOKEN_KEY } from './authContext'
+import { apiUrl } from '../utils/apiUrl'
+import { AuthContext, TOKEN_KEY } from './authContext'
 
 export default function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
@@ -11,7 +12,7 @@ export default function AuthProvider({ children }) {
     const token = localStorage.getItem(TOKEN_KEY)
     if (!token) return
 
-    fetch(`${API}/api/auth/me`, {
+    fetch(apiUrl('/api/auth/me'), {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((r) => (r.ok ? r.json() : Promise.reject()))
@@ -26,7 +27,7 @@ export default function AuthProvider({ children }) {
   }, [])
 
   const register = useCallback(async (email, password) => {
-    const res = await fetch(`${API}/api/auth/register`, {
+    const res = await fetch(apiUrl('/api/auth/register'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
@@ -37,7 +38,7 @@ export default function AuthProvider({ children }) {
   }, [])
 
   const login = useCallback(async (email, password) => {
-    const res = await fetch(`${API}/api/auth/login`, {
+    const res = await fetch(apiUrl('/api/auth/login'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
@@ -58,15 +59,24 @@ export default function AuthProvider({ children }) {
   }, [])
 
   const verifyEmail = useCallback(async (token) => {
-    const res = await fetch(`${API}/api/auth/verify-email?token=${encodeURIComponent(token)}`)
-    const data = await res.json()
+    const res = await fetch(apiUrl(`/api/auth/verify-email?token=${encodeURIComponent(token)}`))
+    let data = {}
+    try {
+      data = await res.json()
+    } catch {
+      throw new Error(
+        res.ok
+          ? 'Invalid response from server.'
+          : `Could not reach the API (HTTP ${res.status}). Check VITE_API_URL and redeploy the frontend.`,
+      )
+    }
     if (!res.ok) throw new Error(data.error || 'Verification failed.')
     saveSession(data.token, data.user)
     return data
   }, [saveSession])
 
   const resendVerification = useCallback(async (email) => {
-    const res = await fetch(`${API}/api/auth/resend-verification`, {
+    const res = await fetch(apiUrl('/api/auth/resend-verification'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email }),
@@ -77,7 +87,7 @@ export default function AuthProvider({ children }) {
   }, [])
 
   const forgotPassword = useCallback(async (email) => {
-    const res = await fetch(`${API}/api/auth/forgot-password`, {
+    const res = await fetch(apiUrl('/api/auth/forgot-password'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email }),
@@ -88,7 +98,7 @@ export default function AuthProvider({ children }) {
   }, [])
 
   const resetPassword = useCallback(async (token, password) => {
-    const res = await fetch(`${API}/api/auth/reset-password`, {
+    const res = await fetch(apiUrl('/api/auth/reset-password'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token, password }),

@@ -1,6 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+
+/** One verify request per token (React Strict Mode remounts would otherwise fire twice and invalidate the link). */
+const verifyByToken = new Map()
 
 export default function EmailVerifyPage() {
   const { verifyEmail } = useAuth()
@@ -11,13 +14,20 @@ export default function EmailVerifyPage() {
   const [message, setMessage] = useState(() =>
     token ? '' : 'Verification token is missing from the URL.',
   )
-  const calledRef = useRef(false)
 
   useEffect(() => {
-    if (!token || calledRef.current) return
-    calledRef.current = true
+    if (!token) return
 
-    verifyEmail(token)
+    let promise = verifyByToken.get(token)
+    if (!promise) {
+      promise = verifyEmail(token).catch((err) => {
+        verifyByToken.delete(token)
+        throw err
+      })
+      verifyByToken.set(token, promise)
+    }
+
+    promise
       .then(({ message: msg }) => {
         setMessage(msg || 'Email verified! Redirecting…')
         setStatus('success')
