@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { apiUrl } from '../utils/apiUrl'
 
 export function useGeocode() {
   const [locationInput, setLocationInput] = useState('')
@@ -26,7 +27,7 @@ export function useGeocode() {
 
     const timer = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/geocode?q=${encodeURIComponent(locationInput)}`, {
+        const res = await fetch(apiUrl(`/api/geocode?q=${encodeURIComponent(locationInput)}`), {
           signal: controller.signal,
         })
         const data = await res.json().catch(() => null)
@@ -54,7 +55,9 @@ export function useGeocode() {
         if (list.length === 0) setGeocodeError('No results found. Try a different place name.')
       } catch (err) {
         if (err.name === 'AbortError') return
-        setGeocodeError('Address search failed. Is the backend running on port 4000?')
+        setGeocodeError(
+          'Address search failed. Check VITE_API_URL (production) or run the backend on port 4000 (local).',
+        )
         setSuggestions([])
         setShowSuggestions(false)
       } finally {

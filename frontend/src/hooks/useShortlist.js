@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { apiUrl } from '../utils/apiUrl'
 import { useAuth } from './useAuth'
 
 const STORAGE_KEY = 'mokucamp_shortlist'
@@ -15,7 +16,7 @@ function readStorage() {
 /** Authenticated fetch helper — reads JWT directly from localStorage. */
 function apiFetch(path, options = {}) {
   const token = localStorage.getItem(TOKEN_KEY)
-  return fetch(path, {
+  return fetch(apiUrl(path), {
     ...options,
     headers: {
       'Content-Type': 'application/json',

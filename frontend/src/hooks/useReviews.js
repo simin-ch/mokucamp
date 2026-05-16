@@ -1,8 +1,10 @@
+import { apiUrl } from '../utils/apiUrl'
+
 const TOKEN_KEY = 'mokucamp_auth_token'
 
 function apiFetch(path, options = {}) {
   const token = localStorage.getItem(TOKEN_KEY)
-  return fetch(path, {
+  return fetch(apiUrl(path), {
     ...options,
     headers: {
       'Content-Type': 'application/json',

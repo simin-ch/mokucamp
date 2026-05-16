@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { apiUrl } from '../utils/apiUrl'
 import { buildRecommendQueryString } from '../utils/queryString'
 
 export function useRecommend() {
@@ -11,7 +12,7 @@ export function useRecommend() {
     setError(null)
     try {
       const qs = buildRecommendQueryString(form, selectedPlace)
-      const res = await fetch(`/api/recommend${qs ? `?${qs}` : ''}`)
+      const res = await fetch(apiUrl(`/api/recommend${qs ? `?${qs}` : ''}`))
       const json = await res.json().catch(() => ({}))
       if (!res.ok) {
         throw new Error(json.message || `HTTP ${res.status}`)

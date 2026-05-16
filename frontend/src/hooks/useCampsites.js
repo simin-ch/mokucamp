@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { apiUrl } from '../utils/apiUrl'
 import { buildMapQueryString, buildQueryString, initialForm } from '../utils/queryString'
 
 export function useCampsites() {
@@ -16,8 +17,8 @@ export function useCampsites() {
       const qs = buildQueryString(f, selectedPlace)
       const mapQs = buildMapQueryString(f, selectedPlace)
       const [res, mapRes] = await Promise.all([
-        fetch(`/api/campsites${qs ? `?${qs}` : ''}`),
-        fetch(`/api/campsites${mapQs ? `?${mapQs}` : ''}`),
+        fetch(apiUrl(`/api/campsites${qs ? `?${qs}` : ''}`)),
+        fetch(apiUrl(`/api/campsites${mapQs ? `?${mapQs}` : ''}`)),
       ])
       const [json, mapJson] = await Promise.all([
         res.json().catch(() => ({})),

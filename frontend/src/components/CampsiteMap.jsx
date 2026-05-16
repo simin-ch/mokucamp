@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Circle, GeoJSON, MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet'
 import CampsiteDetailDrawer from './CampsiteDetailDrawer'
 import MarkerClusterGroup from 'react-leaflet-cluster'
+import { apiUrl } from '../utils/apiUrl'
 import { NEARBY_TRACKS_LIMIT, NEARBY_TRACKS_RADIUS_KM } from '../utils/nearbyTracks'
 
 // Fix default Leaflet icon path broken by bundlers
@@ -420,7 +421,7 @@ export default function CampsiteMap({
         radiusKm: String(NEARBY_TRACKS_RADIUS_KM),
         limit: String(NEARBY_TRACKS_LIMIT),
       })
-      const res = await fetch(`/api/campsites/${c.id}/nearby-tracks?${qs}`, {
+      const res = await fetch(apiUrl(`/api/campsites/${c.id}/nearby-tracks?${qs}`), {
         signal: ac.signal,
       })
       const json = await res.json().catch(() => ({}))
