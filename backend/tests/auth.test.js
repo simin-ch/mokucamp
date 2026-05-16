@@ -66,14 +66,27 @@ describe('POST /api/auth/register', () => {
     expect(sendVerificationEmail).toHaveBeenCalledWith(addr, expect.any(String))
   })
 
-  it('returns 201 silently for duplicate email (anti-enumeration)', async () => {
-    const addr = email('duplicate')
+  it('returns 409 for duplicate verified email', async () => {
+    const addr = email('dup-verified')
     await request(app).post('/api/auth/register').send({ email: addr, password: 'password123' }).expect(201)
+    await prisma.user.update({ where: { email: addr }, data: { emailVerified: true } })
     const res = await request(app)
       .post('/api/auth/register')
       .send({ email: addr, password: 'password123' })
-      .expect(201)
-    expect(res.body.message).toBeDefined()
+      .expect(409)
+    expect(res.body.error).toMatch(/already registered|log in/i)
+  })
+
+  it('returns 409 for duplicate unverified email and resends verification', async () => {
+    const addr = email('dup-unverified')
+    await request(app).post('/api/auth/register').send({ email: addr, password: 'password123' }).expect(201)
+    sendVerificationEmail.mockClear()
+    const res = await request(app)
+      .post('/api/auth/register')
+      .send({ email: addr, password: 'password456' })
+      .expect(409)
+    expect(res.body.error).toMatch(/registered|verify|inbox/i)
+    expect(sendVerificationEmail).toHaveBeenCalledWith(addr, expect.any(String))
   })
 })
 
