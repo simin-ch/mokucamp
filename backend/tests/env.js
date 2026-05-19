@@ -1,6 +1,5 @@
-const path = require('path')
+const { getTestDatabaseUrl } = require('./testDatabaseUrl')
 
-const dbFile = path.join(__dirname, '..', 'prisma', 'test-integration.db')
-process.env.DATABASE_URL = `file:${dbFile}`
-process.env.JWT_SECRET = 'test-jwt-secret-for-jest'
+process.env.DATABASE_URL = getTestDatabaseUrl()
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret-for-jest'
 process.env.NODE_ENV = 'test'

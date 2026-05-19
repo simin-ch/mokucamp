@@ -139,14 +139,26 @@ describe('GET /api/geocode', () => {
 })
 
 describe('GET /api/campsites', () => {
-  it('returns seeded campsites with total', async () => {
+  it('returns campsites with total and includes seeded rows', async () => {
     const res = await request(app).get('/api/campsites').expect(200)
     expect(res.body).toMatchObject({
       landscapeNotFound: false,
     })
     expect(res.body.total).toBeGreaterThanOrEqual(2)
-    const names = res.body.data.map((c) => c.name)
-    expect(names).toEqual(expect.arrayContaining(['Test Bay DOC', 'Alpine Hut']))
+    expect(Array.isArray(res.body.data)).toBe(true)
+
+    // Default page may omit test rows when the DB also has full DOC data (Neon branch copy).
+    const auckland = await request(app)
+      .get('/api/campsites')
+      .query({ region: 'Auckland', limit: '500' })
+      .expect(200)
+    expect(auckland.body.data.some((c) => c.name === 'Test Bay DOC')).toBe(true)
+
+    const canterbury = await request(app)
+      .get('/api/campsites')
+      .query({ region: 'Canterbury', limit: '500' })
+      .expect(200)
+    expect(canterbury.body.data.some((c) => c.name === 'Alpine Hut')).toBe(true)
   })
 
   it('filters by region', async () => {
