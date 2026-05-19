@@ -6,24 +6,12 @@ const { fetchWeather } = require('../utils/weather')
 const { toPublicCampsite } = require('../utils/campsite')
 const { recommendLimiter } = require('../middleware/publicApiRateLimit')
 const { campsiteHasAllLandscapes, campsiteHasAllActivities } = require('../utils/landscape')
+const { haversineKm } = require('../utils/geo')
 
 const prisma = new PrismaClient()
 
 const DEFAULT_TOP_N = 5
 const TRIP_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
-
-// ─── Haversine ────────────────────────────────────────────────────────────────
-
-function haversineKm(lat1, lon1, lat2, lon2) {
-  const R = 6371
-  const toRad = (d) => (d * Math.PI) / 180
-  const dLat = toRad(lat2 - lat1)
-  const dLon = toRad(lon2 - lon1)
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2
-  return R * 2 * Math.asin(Math.sqrt(a))
-}
 
 /** ~km per degree latitude (WGS84 approximation). */
 const KM_PER_DEG_LAT = 111.32
