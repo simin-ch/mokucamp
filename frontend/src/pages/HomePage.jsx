@@ -23,7 +23,7 @@ export default function HomePage() {
 
   const isMinWidthSm = useMinWidthSm()
   const geocode = useGeocode()
-  const { form, setForm, loading, setError, result, setResult, mapResult, setMapResult, fetchCampsites } =
+  const { form, setForm, loading, setError, mapResult, setMapResult, fetchCampsites } =
     useCampsites()
   const recommend = useRecommend()
   const shortlist = useShortlist()
@@ -58,17 +58,14 @@ export default function HomePage() {
 
   function handleSubmit(e) {
     e.preventDefault()
-    const next = { ...form, offset: '0' }
-    setForm(next)
     setMapSearchEpoch((n) => n + 1)
-    fetchCampsites(next, geocode.selectedPlace)
-    recommend.fetchRecommendations(next, geocode.selectedPlace)
+    fetchCampsites(form, geocode.selectedPlace)
+    recommend.fetchRecommendations(form, geocode.selectedPlace)
     setActiveTab('map')
   }
 
   function handleReset() {
     setForm({ ...initialForm, date: defaultTripDate() })
-    setResult(null)
     setError(null)
     setMapResult(null)
     setMapSearchEpoch((n) => n + 1)
@@ -226,7 +223,7 @@ export default function HomePage() {
               form={form}
               setForm={setForm}
               loading={loading}
-              searchResult={result}
+              searchResult={mapResult}
               onSubmit={handleSubmit}
               onReset={handleReset}
             />

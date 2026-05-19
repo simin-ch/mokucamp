@@ -1,5 +1,3 @@
-export const PAGE_SIZE = 50
-
 export function formatLocalDate(d) {
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')
@@ -58,7 +56,6 @@ export const initialForm = {
   facilities: [],
   landscapes: [],
   activities: [],
-  offset: '0',
   radiusKm: '100',
   date: defaultTripDate(),
 }
@@ -69,24 +66,7 @@ function appendFacilityParams(p, form) {
   }
 }
 
-export function buildQueryString(form, place) {
-  const p = new URLSearchParams()
-  appendFacilityParams(p, form)
-  p.set('limit', String(PAGE_SIZE))
-  const offset = Number(form.offset)
-  if (offset > 0) p.set('offset', String(offset))
-  if (place) {
-    p.set('lat', String(place.lat))
-    p.set('lon', String(place.lon))
-    const radiusKm = Number(form.radiusKm)
-    if (radiusKm > 0) p.set('radiusKm', String(radiusKm))
-  }
-  if (form.date) p.set('date', form.date)
-  if (form.landscapes?.length) p.set('landscape', form.landscapes.join(','))
-  if (form.activities?.length) p.set('activity', form.activities.join(','))
-  return p.toString()
-}
-
+/** Query string for map search (up to 500 campsites matching filters). */
 export function buildMapQueryString(form, place) {
   const p = new URLSearchParams()
   appendFacilityParams(p, form)
