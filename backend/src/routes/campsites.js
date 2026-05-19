@@ -13,27 +13,7 @@ const {
 
 const prisma = new PrismaClient()
 
-/**
- * GET /api/campsites
- *
- * Returns the full campsite list from the database with basic query support.
- *
- * Query params:
- *   - region: filter by region (exact match)
- *   - category: filter by campsiteCategory (exact match)
- *   - dogsAllowedBool: filter by dogs allowed (true|false)
- *   - hasToilets: filter by toilets (true|false)
- *   - hasWater: filter by water (true|false)
- *   - hasPower: filter by power (true|false)
- *   - q: search in name, place, region, access (substring)
- *   - limit: max items to return (default 312, max 500)
- *   - offset: items to skip for pagination (default 0)
- *   - lat: centre latitude for distance filtering (WGS84)
- *   - lon: centre longitude for distance filtering (WGS84)
- *   - radiusKm: include only campsites within this radius; results sorted by distance
- *   - landscape: comma-separated landscape types; campsite must include every value (e.g. "Coastal,Forest")
- *   - activity: comma-separated activities; campsite must include every value (e.g. "Walking and tramping,Fishing")
- */
+/** GET /api/campsites — query params and response shape: see listCampsites(). */
 router.get('/', async (req, res) => {
   try {
     const result = await listCampsites(prisma, req.query)
