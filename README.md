@@ -31,7 +31,7 @@ This README is written so a marker or instructor can quickly understand **what t
 
 | Flow | Description |
 |------|-------------|
-| **Search & map** | User enters a New Zealand location (geocoded), trip date, radius, landscape/activity preferences, and facility filters. Results appear on a Leaflet map and in a list. |
+| **Search & map** | User enters a New Zealand location (geocoded), trip date, radius, landscape/activity preferences, and facility filters. Results appear on a Leaflet map as interactive markers. |
 | **Recommendations** | With a valid `lat`, `lon`, and `radiusKm`, the backend ranks campsites by a weighted score (distance, weather, landscape, activities). Without location, campsites are filtered only (no ranking score). |
 | **Campsite detail** | Clicking a campsite shows DOC-sourced details, a day forecast (Open-Meteo), nearby DOC walking tracks, and user reviews. |
 | **Authentication** | Register, email verification, login (JWT). Password reset via email. |
@@ -130,7 +130,7 @@ flowchart TB
 1. User types a place name → `GET /api/geocode?q=...` → Photon returns NZ coordinates.
 2. User submits search → `GET /api/recommend?lat&lon&radiusKm&date&landscapes&activities&...` (or `GET /api/campsites` for unranked browse).
 3. Backend queries PostgreSQL, optionally fetches Open-Meteo per candidate for weather scoring, returns JSON.
-4. Frontend renders markers on Leaflet map and shows ranked/filtered list.
+4. Frontend renders markers on Leaflet map (top picks highlighted separately).
 5. Campsite click → `GET /api/campsites/:id`, `GET /api/forecast`, `GET /api/campsites/:id/nearby-tracks`, `GET /api/reviews/:campsiteId`.
 
 ### Authentication
