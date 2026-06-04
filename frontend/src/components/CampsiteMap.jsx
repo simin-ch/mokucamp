@@ -1,4 +1,5 @@
 import 'leaflet/dist/leaflet.css'
+import 'leaflet.markercluster/dist/MarkerCluster.css'
 import L from 'leaflet'
 import { useEffect, useRef, useState } from 'react'
 import { Circle, GeoJSON, MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet'
@@ -49,23 +50,32 @@ const shortlistMarkerIcon = L.divIcon({
 const topPickIconCache = new Map()
 function getTopPickIcon(rank) {
   if (!topPickIconCache.has(rank)) {
-    topPickIconCache.set(rank, L.divIcon({
-      className: '',
-      html: `<div style="
-        background:#f59e0b;
-        color:#fff;
-        width:32px;height:32px;
-        border-radius:50%;
-        display:flex;align-items:center;justify-content:center;
-        font-size:13px;font-weight:700;
-        border:2px solid #fff;
-        box-shadow:0 2px 6px rgba(0,0,0,.35);
-        line-height:1;
-      ">${rank}</div>`,
-      iconSize: [32, 32],
-      iconAnchor: [16, 16],
-      popupAnchor: [0, -18],
-    }))
+    if (rank === 1) {
+      topPickIconCache.set(rank, new L.Icon({
+        iconUrl: '/images/Toppick.png',
+        iconSize: [80, 100],
+        iconAnchor: [40, 40],
+        popupAnchor: [0, -42],
+      }))
+    } else {
+      topPickIconCache.set(rank, L.divIcon({
+        className: '',
+        html: `<div style="
+          background:#f59e0b;
+          color:#fff;
+          width:32px;height:32px;
+          border-radius:50%;
+          display:flex;align-items:center;justify-content:center;
+          font-size:13px;font-weight:700;
+          border:2px solid #fff;
+          box-shadow:0 2px 6px rgba(0,0,0,.35);
+          line-height:1;
+        ">${rank}</div>`,
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
+        popupAnchor: [0, -18],
+      }))
+    }
   }
   return topPickIconCache.get(rank)
 }
@@ -487,6 +497,27 @@ export default function CampsiteMap({
         <MarkerClusterGroup
           chunkedLoading
           maxClusterRadius={50}
+          iconCreateFunction={(cluster) => {
+            const count = cluster.getChildCount()
+            const size = count < 10 ? 36 : count < 100 ? 42 : 50
+            const fontSize = size < 42 ? 13 : 15
+            return L.divIcon({
+              className: '',
+              html: `<div style="
+                background:#0ea5e9;
+                color:#fff;
+                width:${size}px;height:${size}px;
+                border-radius:50%;
+                display:flex;align-items:center;justify-content:center;
+                font-size:${fontSize}px;font-weight:700;
+                border:3px solid #fff;
+                box-shadow:0 3px 10px rgba(0,0,0,.4);
+                line-height:1;
+              ">${count}</div>`,
+              iconSize: [size, size],
+              iconAnchor: [size / 2, size / 2],
+            })
+          }}
         >
           {regularCampsites.map((c) => (
             <Marker key={c.id} position={[c.lat, c.lon]} icon={campsiteMarkerIcon}>
