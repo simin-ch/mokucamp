@@ -2,8 +2,6 @@
 
 MōkuCamp takes its name from the Māori word **mōku**, meaning “for me” — a web application that recommends New Zealand camping locations based on the user’s trip location, dates, landscape and activity preferences, and facility needs.
 
-This README is written so a marker or instructor can quickly understand **what the system does**, **how it is built**, and **how to run and test it** without reading the whole codebase.
-
 **Live demo:** [https://mokucamp.vercel.app/](https://mokucamp.vercel.app/)
 
 ---
@@ -78,6 +76,7 @@ mokucamp/
 ├── frontend/                 # React SPA
 │   ├── src/pages/            # HomePage, ProfilePage, ResetPasswordPage
 │   ├── src/components/       # Map, search form, drawers, auth UI
+│   ├── src/hooks/            # Custom React hooks (auth, campsites, shortlist, reviews, nearby trails, …)
 │   └── vite.config.js        # Dev proxy: /api → http://localhost:4000
 ├── data/geojson/
 │   └── DOC_Campsites_202602.geojson   # Source dataset for seeding
@@ -297,12 +296,6 @@ Response: `{ data: [...], total, ... }` (public campsite objects omit internal f
 |--------|------|------|-------|-------------|
 | GET | `/` | No | `lat`, `lon`, `date` | Single-day Open-Meteo daily payload |
 
-### Weather — `/api/weather`
-
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| GET | `/` | No | **Scaffold only** — returns sample data. Real weather is used via `/api/forecast` and inside `/api/recommend`. |
-
 ### Shortlist — `/api/shortlist`
 
 | Method | Path | Auth | Description |
@@ -360,7 +353,7 @@ npm test
 
 **Important:** Use a **direct** Neon connection string for `TEST_DATABASE_URL` (not the pooler URL), so Prisma can apply schema changes reliably. See comments in `backend/.env.example`.
 
-Test files: `api.test.js`, `auth.test.js`, `reviews.test.js`, `shortlist.test.js`, `forecast.test.js`.
+Test files: `api.test.js` (campsites, geocode, recommend, nearby tracks), `auth.test.js`, `reviews.test.js`, `shortlist.test.js`, `forecast.test.js`.
 
 ### Frontend (`cd frontend`)
 
