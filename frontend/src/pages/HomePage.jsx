@@ -13,13 +13,70 @@ import { useShortlist } from '../hooks/useShortlist'
 import { apiUrl } from '../utils/apiUrl'
 import { defaultTripDate, initialForm } from '../utils/queryString'
 
+/** Logged-in user button with profile / logout dropdown. */
+function UserMenuButton({ user, onNavigateProfile, onLogout }) {
+  const [menuOpen, setMenuOpen] = useState(false)
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setMenuOpen((v) => !v)}
+        className="flex items-center gap-1.5 rounded-lg border border-stone-200/90 bg-white/60 px-3 py-1.5 text-sm font-medium text-stone-600 transition-colors hover:bg-white/90 hover:text-stone-800"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-emerald-600" viewBox="0 0 24 24" fill="currentColor">
+          <path fillRule="evenodd" d="M18.685 19.097A9.723 9.723 0 0 0 21.75 12c0-5.385-4.365-9.75-9.75-9.75S2.25 6.615 2.25 12a9.723 9.723 0 0 0 3.065 7.097A9.716 9.716 0 0 0 12 21.75a9.716 9.716 0 0 0 6.685-2.653Zm-12.54-1.285A7.486 7.486 0 0 1 12 15a7.486 7.486 0 0 1 5.855 2.812A8.224 8.224 0 0 1 12 20.25a8.224 8.224 0 0 1-5.855-2.438ZM15.75 9a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" clipRule="evenodd" />
+        </svg>
+        <span className="hidden max-w-[120px] truncate sm:inline">
+          {user.username || user.email}
+        </span>
+        <svg xmlns="http://www.w3.org/2000/svg" className={`h-3 w-3 transition-transform ${menuOpen ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+
+      {menuOpen && (
+        <>
+          <div className="fixed inset-0 z-[9998]" onClick={() => setMenuOpen(false)} />
+          <div className="absolute right-0 top-full z-[9999] mt-1.5 w-48 rounded-xl border border-stone-200 bg-white py-1 shadow-lg">
+            <p className="truncate px-3 py-2 text-xs text-stone-400">{user.email}</p>
+            <hr className="border-stone-100" />
+            <button
+              type="button"
+              onClick={() => { setMenuOpen(false); onNavigateProfile() }}
+              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-stone-700 hover:bg-stone-50"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-stone-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+              My profile
+            </button>
+            <button
+              type="button"
+              onClick={() => { setMenuOpen(false); onLogout() }}
+              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+              Log out
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 export default function HomePage() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
 
   const [loginOpen, setLoginOpen] = useState(false)
-  const [menuOpen, setMenuOpen] = useState(false)
 
   const isMinWidthSm = useMinWidthSm()
   const geocode = useGeocode()
@@ -87,57 +144,11 @@ export default function HomePage() {
           <div className="flex items-center gap-2">
             {/* Auth button */}
             {user ? (
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setMenuOpen((v) => !v)}
-                  className="flex items-center gap-1.5 rounded-lg border border-stone-200/90 bg-white/60 px-3 py-1.5 text-sm font-medium text-stone-600 transition-colors hover:bg-white/90 hover:text-stone-800"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-emerald-600" viewBox="0 0 24 24" fill="currentColor">
-                    <path fillRule="evenodd" d="M18.685 19.097A9.723 9.723 0 0 0 21.75 12c0-5.385-4.365-9.75-9.75-9.75S2.25 6.615 2.25 12a9.723 9.723 0 0 0 3.065 7.097A9.716 9.716 0 0 0 12 21.75a9.716 9.716 0 0 0 6.685-2.653Zm-12.54-1.285A7.486 7.486 0 0 1 12 15a7.486 7.486 0 0 1 5.855 2.812A8.224 8.224 0 0 1 12 20.25a8.224 8.224 0 0 1-5.855-2.438ZM15.75 9a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" clipRule="evenodd" />
-                  </svg>
-                  <span className="hidden max-w-[120px] truncate sm:inline">
-                    {user.username || user.email}
-                  </span>
-                  <svg xmlns="http://www.w3.org/2000/svg" className={`h-3 w-3 transition-transform ${menuOpen ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="6 9 12 15 18 9" />
-                  </svg>
-                </button>
-
-                {/* Dropdown */}
-                {menuOpen && (
-                  <>
-                    <div className="fixed inset-0 z-[9998]" onClick={() => setMenuOpen(false)} />
-                    <div className="absolute right-0 top-full z-[9999] mt-1.5 w-48 rounded-xl border border-stone-200 bg-white py-1 shadow-lg">
-                      <p className="truncate px-3 py-2 text-xs text-stone-400">{user.email}</p>
-                      <hr className="border-stone-100" />
-                      <button
-                        type="button"
-                        onClick={() => { setMenuOpen(false); navigate('/profile') }}
-                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-stone-700 hover:bg-stone-50"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-stone-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                          <circle cx="12" cy="7" r="4" />
-                        </svg>
-                        My profile
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => { setMenuOpen(false); logout() }}
-                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                          <polyline points="16 17 21 12 16 7" />
-                          <line x1="21" y1="12" x2="9" y2="12" />
-                        </svg>
-                        Log out
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
+              <UserMenuButton
+                user={user}
+                onNavigateProfile={() => navigate('/profile')}
+                onLogout={logout}
+              />
             ) : (
               <button
                 type="button"

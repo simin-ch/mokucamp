@@ -5,8 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Circle, GeoJSON, MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet'
 import CampsiteDetailDrawer from './CampsiteDetailDrawer'
 import MarkerClusterGroup from 'react-leaflet-cluster'
-import { apiUrl } from '../utils/apiUrl'
-import { NEARBY_TRACKS_LIMIT, NEARBY_TRACKS_RADIUS_KM } from '../utils/nearbyTracks'
+import { useNearbyTrails } from '../hooks/useNearbyTrails'
 
 // Fix default Leaflet icon path broken by bundlers
 delete L.Icon.Default.prototype._getIconUrl
@@ -361,41 +360,22 @@ export default function CampsiteMap({
   onFocusConsumed,
 }) {
   const [detailCampsite, setDetailCampsite] = useState(null)
-  const [nearbyTrails, setNearbyTrails] = useState(null)
-  const trailsAbortRef = useRef(null)
-  const prevSearchEpochRef = useRef(mapSearchEpoch)
-
-  // Clear hiking tracks when the user runs a new search or resets filters
-  useEffect(() => {
-    if (prevSearchEpochRef.current === mapSearchEpoch) return
-    prevSearchEpochRef.current = mapSearchEpoch
-    trailsAbortRef.current?.abort()
-    trailsAbortRef.current = null
-    setNearbyTrails(null)
-  }, [mapSearchEpoch])
+  const { nearbyTrails, showTrails, hideTrails } = useNearbyTrails(mapSearchEpoch)
 
   // When a campsite is focused (from profile page), open its detail drawer
   useEffect(() => {
     if (focusCampsite) setDetailCampsite(focusCampsite)
   }, [focusCampsite])
 
-  const handleHideNearbyTrails = () => {
-    trailsAbortRef.current?.abort()
-    trailsAbortRef.current = null
-    setNearbyTrails(null)
-  }
-
   // Clear map tracks when viewing a different campsite in the drawer
   useEffect(() => {
-    if (
-      detailCampsite?.id &&
-      nearbyTrails?.campsiteId &&
-      nearbyTrails.campsiteId !== detailCampsite.id
-    ) {
-      handleHideNearbyTrails()
+    if (detailCampsite?.id && nearbyTrails?.campsiteId && nearbyTrails.campsiteId !== detailCampsite.id) {
+      hideTrails()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only react to campsite switch
   }, [detailCampsite?.id])
+
+  const handleCloseDetail = () => setDetailCampsite(null)
 
   const campsites = mapResult?.data ?? []
   // Only numbered "Top Pick" markers when recommendations are ranked (search has a location).
@@ -411,60 +391,6 @@ export default function CampsiteMap({
   const shortlistMarkers = shortlistItems.filter((c) => !topPickIds.has(c.id))
 
   const radiusM = selectedPlace && Number(radiusKm) > 0 ? Number(radiusKm) * 1000 : null
-
-  const handleShowNearbyTrails = async (c) => {
-    trailsAbortRef.current?.abort()
-    const ac = new AbortController()
-    trailsAbortRef.current = ac
-
-    setNearbyTrails({
-      campsiteId: c.id,
-      campsite: c,
-      trails: [],
-      loading: true,
-      error: null,
-      empty: false,
-    })
-
-    try {
-      const qs = new URLSearchParams({
-        radiusKm: String(NEARBY_TRACKS_RADIUS_KM),
-        limit: String(NEARBY_TRACKS_LIMIT),
-      })
-      const res = await fetch(apiUrl(`/api/campsites/${c.id}/nearby-tracks?${qs}`), {
-        signal: ac.signal,
-      })
-      const json = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        throw new Error(json.message || 'Failed to load tracks')
-      }
-      const trails = json.data ?? []
-      setNearbyTrails({
-        campsiteId: c.id,
-        campsite: c,
-        trails,
-        loading: false,
-        error: null,
-        empty: trails.length === 0,
-      })
-    } catch (err) {
-      if (err.name === 'AbortError') return
-      setNearbyTrails({
-        campsiteId: c.id,
-        campsite: c,
-        trails: [],
-        loading: false,
-        error: err.message || 'Failed to load tracks',
-        empty: false,
-      })
-    }
-  }
-
-  useEffect(() => () => trailsAbortRef.current?.abort(), [])
-
-  const handleCloseDetail = () => {
-    setDetailCampsite(null)
-  }
 
   const popupProps = { onToggleShortlist, onOpenDetail: setDetailCampsite }
 
@@ -556,8 +482,8 @@ export default function CampsiteMap({
         onToggleShortlist={onToggleShortlist}
         isShortlisted={isShortlisted}
         nearbyTrails={nearbyTrails}
-        onShowNearbyTrails={handleShowNearbyTrails}
-        onHideNearbyTrails={handleHideNearbyTrails}
+        onShowNearbyTrails={showTrails}
+        onHideNearbyTrails={hideTrails}
       />
     </div>
   )

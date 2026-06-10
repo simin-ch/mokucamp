@@ -174,6 +174,219 @@ function CampsiteForecastSection({ lat, lon, tripDate }) {
   )
 }
 
+/**
+ * DOC walking tracks panel shown inside the Activities section.
+ * Handles the toggle button, loading state, error, empty, and track list.
+ */
+function CampsiteTrailsSection({ campsite, trailsForCampsite, trailsLoading, trailsActive, onShowNearbyTrails, onHideNearbyTrails }) {
+  return (
+    <div className="mt-4 border-t border-teal-100 pt-4">
+      <p className="mb-2 text-xs text-stone-500">
+        DOC tracks within {NEARBY_TRACKS_RADIUS_KM} km
+      </p>
+      {trailsActive ? (
+        <button
+          type="button"
+          onClick={() => onHideNearbyTrails?.()}
+          className="w-full rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900 transition-colors hover:bg-amber-100"
+        >
+          Hide tracks on map
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => onShowNearbyTrails(campsite)}
+          disabled={trailsLoading}
+          className="w-full rounded-lg border border-amber-400 bg-white px-3 py-2 text-sm font-semibold text-amber-800 transition-colors hover:bg-amber-50 disabled:cursor-wait disabled:opacity-60"
+        >
+          {trailsLoading ? 'Loading tracks…' : 'Show nearby hiking tracks'}
+        </button>
+      )}
+      {trailsForCampsite?.error && (
+        <p className="mt-2 text-xs text-red-600">{trailsForCampsite.error}</p>
+      )}
+      {trailsForCampsite?.empty && !trailsLoading && (
+        <p className="mt-2 text-xs text-stone-500">
+          No DOC tracks within {NEARBY_TRACKS_RADIUS_KM} km.
+        </p>
+      )}
+      {trailsForCampsite?.trails?.length > 0 && (
+        <ul className="mt-3 space-y-2">
+          {trailsForCampsite.trails.map((track) => (
+            <li
+              key={track.objectId ?? track.name}
+              className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm"
+            >
+              <p className="font-medium text-stone-900">{track.name}</p>
+              <p className="mt-0.5 text-xs text-stone-500">
+                {[track.difficulty, track.completionTime].filter(Boolean).join(' · ')}
+                {track.distanceKm != null && ` · ~${track.distanceKm} km`}
+              </p>
+              {track.webPage && (
+                <a
+                  href={track.webPage}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-1 inline-block text-xs font-medium text-emerald-700 hover:underline"
+                >
+                  DOC track page →
+                </a>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Full content of the Info tab: badges, forecast, about, access, activities
+ * (with nearby tracks), facilities, dogs policy, and capacity.
+ */
+function CampsiteInfoTab({ campsite: c, tripDate, shortlisted, onToggleShortlist, trailsForCampsite, trailsLoading, trailsActive, onShowNearbyTrails, onHideNearbyTrails }) {
+  const accessItems = parseList(c.access)
+  const activityItems = parseList(c.activities)
+  const facilityItems = mergeWaterTapBoilAdjacent(dedupeToiletFacilities(parseList(c.facilities)))
+  const dogsText = stripHtml(c.dogsAllowed)
+  const showNearbyTracks = hasWalkingAndTramping(c.activities)
+
+  return (
+    <div>
+      {/* Badges + shortlist button */}
+      <div className="px-5 py-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-wrap gap-1.5">
+            {c.campsiteCategory && (
+              <span className="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs font-medium text-stone-700">
+                {c.campsiteCategory}
+              </span>
+            )}
+            {c.bookable && (
+              <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800">
+                Bookable
+              </span>
+            )}
+            {c.distanceKm != null && (
+              <span className="rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-medium text-sky-800">
+                {c.distanceKm < 1 ? `${Math.round(c.distanceKm * 1000)} m` : `${c.distanceKm} km`}
+              </span>
+            )}
+            {c.landscape && c.landscape.split(',').map((l) => (
+              <span key={l} className="rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-medium text-teal-700">
+                {l.trim()}
+              </span>
+            ))}
+          </div>
+          {onToggleShortlist && (
+            <button
+              type="button"
+              onClick={() => onToggleShortlist(c)}
+              title={shortlisted ? 'Remove from shortlist' : 'Add to shortlist'}
+              className={`shrink-0 rounded-xl border p-2 transition-colors ${
+                shortlisted
+                  ? 'border-violet-200 bg-violet-50 text-violet-600 hover:bg-violet-100'
+                  : 'border-stone-200 bg-white text-stone-400 hover:border-stone-300 hover:text-stone-600'
+              }`}
+            >
+              <BookmarkIcon filled={shortlisted} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {tripDate && (
+        <CampsiteForecastSection
+          key={`${c.id}-${tripDate}`}
+          lat={c.lat}
+          lon={c.lon}
+          tripDate={tripDate}
+        />
+      )}
+
+      {c.introduction && (
+        <Section title="About">
+          <p className="text-sm leading-relaxed text-stone-700">{c.introduction}</p>
+        </Section>
+      )}
+
+      {accessItems.length > 0 && (
+        <Section title="Getting There">
+          <div className="flex flex-wrap gap-2">
+            {accessItems.map((item) => (
+              <span
+                key={item}
+                className="flex items-center gap-1.5 rounded-full border border-stone-200 bg-stone-50 px-3 py-1 text-sm text-stone-700"
+              >
+                <span>{ACCESS_ICONS[item] ?? '📍'}</span>
+                {item}
+              </span>
+            ))}
+          </div>
+        </Section>
+      )}
+
+      {activityItems.length > 0 && (
+        <Section title="Activities">
+          <div className="flex flex-wrap gap-2">
+            {activityItems.map((item) => (
+              <span
+                key={item}
+                className="flex items-center gap-1.5 rounded-full border border-teal-200 bg-teal-50 px-3 py-1 text-sm text-teal-800"
+              >
+                <span>{ACTIVITY_ICONS[item] ?? '🌿'}</span>
+                {item}
+              </span>
+            ))}
+          </div>
+          {showNearbyTracks && onShowNearbyTrails && (
+            <CampsiteTrailsSection
+              campsite={c}
+              trailsForCampsite={trailsForCampsite}
+              trailsLoading={trailsLoading}
+              trailsActive={trailsActive}
+              onShowNearbyTrails={onShowNearbyTrails}
+              onHideNearbyTrails={onHideNearbyTrails}
+            />
+          )}
+        </Section>
+      )}
+
+      {facilityItems.length > 0 && (
+        <Section title="Facilities">
+          <ul className="space-y-1.5">
+            {facilityItems.map((item) => (
+              <li key={item} className="flex items-center gap-2 text-sm text-stone-700">
+                <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
+                {item}
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
+
+      {dogsText && (
+        <Section title="Dogs">
+          <p className="text-sm leading-relaxed text-stone-700">{dogsText}</p>
+        </Section>
+      )}
+
+      {(c.numberOfPoweredSites != null || c.numberOfUnpoweredSites != null) && (
+        <Section title="Capacity">
+          <div className="flex gap-4 text-sm text-stone-700">
+            {c.numberOfUnpoweredSites != null && (
+              <span>⛺ <span className="font-medium">{c.numberOfUnpoweredSites}</span> unpowered</span>
+            )}
+            {c.numberOfPoweredSites != null && (
+              <span>🔌 <span className="font-medium">{c.numberOfPoweredSites}</span> powered</span>
+            )}
+          </div>
+        </Section>
+      )}
+    </div>
+  )
+}
+
 const TABS = [
   { id: 'info', label: 'Info' },
   { id: 'reviews', label: 'Reviews' },
@@ -200,11 +413,6 @@ export default function CampsiteDetailDrawer({
     if (campsiteId != null) setActiveTab('info')
   }
 
-  const accessItems = parseList(c?.access)
-  const activityItems = parseList(c?.activities)
-  const facilityItems = mergeWaterTapBoilAdjacent(dedupeToiletFacilities(parseList(c?.facilities)))
-  const dogsText = stripHtml(c?.dogsAllowed)
-  const showNearbyTracks = hasWalkingAndTramping(c?.activities)
   const trailsForCampsite = nearbyTrails?.campsiteId === c?.id ? nearbyTrails : null
   const trailsLoading = trailsForCampsite?.loading ?? false
   const trailsActive =
@@ -253,7 +461,7 @@ export default function CampsiteDetailDrawer({
               </button>
             </div>
 
-            {/* Tab bar — shrink-0, sits directly under hero, never scrolls */}
+            {/* Tab bar — shrink-0, sits directly under header, never scrolls */}
             <div className="flex shrink-0 border-b border-stone-200 bg-white">
               {TABS.map((tab) => (
                 <button
@@ -273,210 +481,25 @@ export default function CampsiteDetailDrawer({
 
             {/* Scrollable content area — only this region scrolls */}
             <div className="flex-1 overflow-y-auto">
-
-              {/* ── Info Tab ─────────────────────────────────────── */}
               {activeTab === 'info' && (
-                <div>
-                  {/* Badges + shortlist button */}
-                  <div className="px-5 py-4">
-                    <div className="flex items-start justify-between gap-3">
-                    {/* Badges */}
-                    <div className="flex flex-wrap gap-1.5">
-                      {c.campsiteCategory && (
-                        <span className="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs font-medium text-stone-700">
-                          {c.campsiteCategory}
-                        </span>
-                      )}
-                      {c.bookable && (
-                        <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800">
-                          Bookable
-                        </span>
-                      )}
-                      {c.distanceKm != null && (
-                        <span className="rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-medium text-sky-800">
-                          {c.distanceKm < 1 ? `${Math.round(c.distanceKm * 1000)} m` : `${c.distanceKm} km`}
-                        </span>
-                      )}
-                      {c.landscape && c.landscape.split(',').map((l) => (
-                        <span key={l} className="rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-medium text-teal-700">
-                          {l.trim()}
-                        </span>
-                      ))}
-                    </div>
-                    {onToggleShortlist && (
-                      <button
-                        type="button"
-                        onClick={() => onToggleShortlist(c)}
-                        title={shortlisted ? 'Remove from shortlist' : 'Add to shortlist'}
-                        className={`shrink-0 rounded-xl border p-2 transition-colors ${
-                          shortlisted
-                            ? 'border-violet-200 bg-violet-50 text-violet-600 hover:bg-violet-100'
-                            : 'border-stone-200 bg-white text-stone-400 hover:border-stone-300 hover:text-stone-600'
-                        }`}
-                      >
-                        <BookmarkIcon filled={shortlisted} />
-                      </button>
-                    )}
-                    </div>
-                  </div>
-
-                  {tripDate && (
-                    <CampsiteForecastSection
-                      key={`${c.id}-${tripDate}`}
-                      lat={c.lat}
-                      lon={c.lon}
-                      tripDate={tripDate}
-                    />
-                  )}
-
-                  {/* Introduction */}
-                  {c.introduction && (
-                    <Section title="About">
-                      <p className="text-sm leading-relaxed text-stone-700">{c.introduction}</p>
-                    </Section>
-                  )}
-
-                  {/* Access */}
-                  {accessItems.length > 0 && (
-                    <Section title="Getting There">
-                      <div className="flex flex-wrap gap-2">
-                        {accessItems.map((item) => (
-                          <span
-                            key={item}
-                            className="flex items-center gap-1.5 rounded-full border border-stone-200 bg-stone-50 px-3 py-1 text-sm text-stone-700"
-                          >
-                            <span>{ACCESS_ICONS[item] ?? '📍'}</span>
-                            {item}
-                          </span>
-                        ))}
-                      </div>
-                    </Section>
-                  )}
-
-                  {/* Activities */}
-                  {activityItems.length > 0 && (
-                    <Section title="Activities">
-                      <div className="flex flex-wrap gap-2">
-                        {activityItems.map((item) => (
-                          <span
-                            key={item}
-                            className="flex items-center gap-1.5 rounded-full border border-teal-200 bg-teal-50 px-3 py-1 text-sm text-teal-800"
-                          >
-                            <span>{ACTIVITY_ICONS[item] ?? '🌿'}</span>
-                            {item}
-                          </span>
-                        ))}
-                      </div>
-
-                      {showNearbyTracks && onShowNearbyTrails && (
-                        <div className="mt-4 border-t border-teal-100 pt-4">
-                          <p className="mb-2 text-xs text-stone-500">
-                            DOC tracks within {NEARBY_TRACKS_RADIUS_KM} km
-                          </p>
-                          {trailsActive ? (
-                            <button
-                              type="button"
-                              onClick={() => onHideNearbyTrails?.()}
-                              className="w-full rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900 transition-colors hover:bg-amber-100"
-                            >
-                              Hide tracks on map
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => onShowNearbyTrails(c)}
-                              disabled={trailsLoading}
-                              className="w-full rounded-lg border border-amber-400 bg-white px-3 py-2 text-sm font-semibold text-amber-800 transition-colors hover:bg-amber-50 disabled:cursor-wait disabled:opacity-60"
-                            >
-                              {trailsLoading ? 'Loading tracks…' : 'Show nearby hiking tracks'}
-                            </button>
-                          )}
-                          {trailsForCampsite?.error && (
-                            <p className="mt-2 text-xs text-red-600">{trailsForCampsite.error}</p>
-                          )}
-                          {trailsForCampsite?.empty && !trailsLoading && (
-                            <p className="mt-2 text-xs text-stone-500">
-                              No DOC tracks within {NEARBY_TRACKS_RADIUS_KM} km.
-                            </p>
-                          )}
-                          {trailsForCampsite?.trails?.length > 0 && (
-                            <ul className="mt-3 space-y-2">
-                              {trailsForCampsite.trails.map((track) => (
-                                <li
-                                  key={track.objectId ?? track.name}
-                                  className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm"
-                                >
-                                  <p className="font-medium text-stone-900">{track.name}</p>
-                                  <p className="mt-0.5 text-xs text-stone-500">
-                                    {[track.difficulty, track.completionTime]
-                                      .filter(Boolean)
-                                      .join(' · ')}
-                                    {track.distanceKm != null && ` · ~${track.distanceKm} km`}
-                                  </p>
-                                  {track.webPage && (
-                                    <a
-                                      href={track.webPage}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      className="mt-1 inline-block text-xs font-medium text-emerald-700 hover:underline"
-                                    >
-                                      DOC track page →
-                                    </a>
-                                  )}
-                                </li>
-                              ))}
-                            </ul>
-                          )}
-                        </div>
-                      )}
-                    </Section>
-                  )}
-
-                  {/* Facilities */}
-                  {facilityItems.length > 0 && (
-                    <Section title="Facilities">
-                      <ul className="space-y-1.5">
-                        {facilityItems.map((item) => (
-                          <li key={item} className="flex items-center gap-2 text-sm text-stone-700">
-                            <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
-                    </Section>
-                  )}
-
-                  {/* Dogs */}
-                  {dogsText && (
-                    <Section title="Dogs">
-                      <p className="text-sm leading-relaxed text-stone-700">{dogsText}</p>
-                    </Section>
-                  )}
-
-                  {/* Capacity */}
-                  {(c.numberOfPoweredSites != null || c.numberOfUnpoweredSites != null) && (
-                    <Section title="Capacity">
-                      <div className="flex gap-4 text-sm text-stone-700">
-                        {c.numberOfUnpoweredSites != null && (
-                          <span>⛺ <span className="font-medium">{c.numberOfUnpoweredSites}</span> unpowered</span>
-                        )}
-                        {c.numberOfPoweredSites != null && (
-                          <span>🔌 <span className="font-medium">{c.numberOfPoweredSites}</span> powered</span>
-                        )}
-                      </div>
-                    </Section>
-                  )}
-                </div>
+                <CampsiteInfoTab
+                  campsite={c}
+                  tripDate={tripDate}
+                  shortlisted={shortlisted}
+                  onToggleShortlist={onToggleShortlist}
+                  trailsForCampsite={trailsForCampsite}
+                  trailsLoading={trailsLoading}
+                  trailsActive={trailsActive}
+                  onShowNearbyTrails={onShowNearbyTrails}
+                  onHideNearbyTrails={onHideNearbyTrails}
+                />
               )}
-
-              {/* ── Reviews Tab ──────────────────────────────────── */}
               {activeTab === 'reviews' && (
                 <ReviewsTab campsiteId={c.id} />
               )}
-
             </div>
 
-            {/* Footer — only shown on Info tab */}
+            {/* Footer — only shown on Info tab when a DOC page link is available */}
             {activeTab === 'info' && c.staticLink && (
               <div className="shrink-0 border-t border-stone-100 px-5 py-4">
                 <a
