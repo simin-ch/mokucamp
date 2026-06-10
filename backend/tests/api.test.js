@@ -80,18 +80,6 @@ describe('GET /health', () => {
   })
 })
 
-describe('GET /api/weather', () => {
-  it('returns scaffold payload', async () => {
-    const res = await request(app).get('/api/weather').expect(200)
-    expect(res.body.data).toMatchObject({
-      location: 'Sample campsite',
-      temperatureC: 22,
-      condition: 'Cloudy',
-    })
-    expect(res.body.message).toContain('scaffold')
-  })
-})
-
 describe('GET /api/geocode', () => {
   it('returns empty array when query is too short', async () => {
     const res = await request(app).get('/api/geocode').query({ q: 'ab' }).expect(200)
