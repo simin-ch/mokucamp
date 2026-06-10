@@ -22,8 +22,13 @@ async function getUserShortlist(userId) {
 // GET /api/shortlist  — fetch current user's shortlist
 // ---------------------------------------------------------------------------
 router.get('/', authenticate, async (req, res) => {
-  const items = await getUserShortlist(req.user.id)
-  return res.json({ items })
+  try {
+    const items = await getUserShortlist(req.user.id)
+    return res.json({ items })
+  } catch (err) {
+    console.error(err)
+    return res.status(500).json({ error: 'Failed to fetch shortlist.' })
+  }
 })
 
 // ---------------------------------------------------------------------------
@@ -80,8 +85,13 @@ router.post('/:campsiteId', authenticate, async (req, res) => {
 // DELETE /api/shortlist  — clear the entire shortlist
 // ---------------------------------------------------------------------------
 router.delete('/', authenticate, async (req, res) => {
-  await prisma.shortlistItem.deleteMany({ where: { userId: req.user.id } })
-  return res.json({ message: 'Shortlist cleared.' })
+  try {
+    await prisma.shortlistItem.deleteMany({ where: { userId: req.user.id } })
+    return res.json({ message: 'Shortlist cleared.' })
+  } catch (err) {
+    console.error(err)
+    return res.status(500).json({ error: 'Failed to clear shortlist.' })
+  }
 })
 
 // ---------------------------------------------------------------------------
@@ -91,8 +101,13 @@ router.delete('/:campsiteId', authenticate, async (req, res) => {
   const campsiteId = parseInt(req.params.campsiteId, 10)
   if (isNaN(campsiteId)) return res.status(400).json({ error: 'Invalid campsite ID.' })
 
-  await prisma.shortlistItem.deleteMany({ where: { userId: req.user.id, campsiteId } })
-  return res.json({ message: 'Removed from shortlist.' })
+  try {
+    await prisma.shortlistItem.deleteMany({ where: { userId: req.user.id, campsiteId } })
+    return res.json({ message: 'Removed from shortlist.' })
+  } catch (err) {
+    console.error(err)
+    return res.status(500).json({ error: 'Failed to remove from shortlist.' })
+  }
 })
 
 module.exports = router

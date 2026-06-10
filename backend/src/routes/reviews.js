@@ -42,40 +42,45 @@ router.get('/:campsiteId', async (req, res) => {
   const page = Math.max(1, parseInt(req.query.page, 10) || 1)
   const skip = (page - 1) * PAGE_SIZE
 
-  const [total, rows] = await Promise.all([
-    prisma.review.count({ where: { campsiteId } }),
-    prisma.review.findMany({
+  try {
+    const [total, rows] = await Promise.all([
+      prisma.review.count({ where: { campsiteId } }),
+      prisma.review.findMany({
+        where: { campsiteId },
+        include: { user: { select: { id: true, username: true } } },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: PAGE_SIZE,
+      }),
+    ])
+
+    // Aggregate: average + per-star distribution [1★, 2★, 3★, 4★, 5★]
+    const allRatings = await prisma.review.findMany({
       where: { campsiteId },
-      include: { user: { select: { id: true, username: true } } },
-      orderBy: { createdAt: 'desc' },
-      skip,
-      take: PAGE_SIZE,
-    }),
-  ])
+      select: { rating: true },
+    })
 
-  // Aggregate: average + per-star distribution [1★, 2★, 3★, 4★, 5★]
-  const allRatings = await prisma.review.findMany({
-    where: { campsiteId },
-    select: { rating: true },
-  })
+    const distribution = [0, 0, 0, 0, 0]
+    let ratingSum = 0
+    for (const { rating } of allRatings) {
+      ratingSum += rating
+      if (rating >= 1 && rating <= 5) distribution[rating - 1]++
+    }
+    const avg = total > 0 ? Math.round((ratingSum / total) * 10) / 10 : null
 
-  const distribution = [0, 0, 0, 0, 0]
-  let ratingSum = 0
-  for (const { rating } of allRatings) {
-    ratingSum += rating
-    if (rating >= 1 && rating <= 5) distribution[rating - 1]++
+    return res.json({
+      aggregate: { avg, total, distribution },
+      reviews: rows.map((r) => ({
+        ...r,
+        user: publicReviewUser(r.user),
+      })),
+      page,
+      totalPages: Math.ceil(total / PAGE_SIZE) || 1,
+    })
+  } catch (err) {
+    console.error(err)
+    return res.status(500).json({ error: 'Failed to fetch reviews.' })
   }
-  const avg = total > 0 ? Math.round((ratingSum / total) * 10) / 10 : null
-
-  return res.json({
-    aggregate: { avg, total, distribution },
-    reviews: rows.map((r) => ({
-      ...r,
-      user: publicReviewUser(r.user),
-    })),
-    page,
-    totalPages: Math.ceil(total / PAGE_SIZE) || 1,
-  })
 })
 
 // ---------------------------------------------------------------------------
