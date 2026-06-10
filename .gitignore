@@ -144,6 +144,5 @@ vite.config.ts.timestamp-*
 # macOS
 .DS_Store
 
-# Cursor IDE (local agent rules & caches)
-.cursor/rules/
-.cursor/**/__pycache__/
+# Cursor IDE (local agent rules, skills & caches)
+.cursor/
